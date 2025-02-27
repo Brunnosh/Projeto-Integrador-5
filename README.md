@@ -1,4 +1,4 @@
-# Projeto-Integrador-5: Sistema de análise de curriculos via I.A
+# Projeto-Integrador-5: Serviço de gerenciamento de finanças integrado com I.A
 
 - Repositório do projeto integrador 5
 
