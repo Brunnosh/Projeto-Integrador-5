@@ -22,7 +22,10 @@
 2. Clone o repositório ou baixe o projeto
 
 ### ▶️ Rodar aplicação
-**docker-compose up --build**
+- **docker-compose up --build**
+- **cd frontend**
+- **flutter pub get**
+- **flutter run**
 
 ### 🛑 Parar a aplicação
 **docker-compose down**
