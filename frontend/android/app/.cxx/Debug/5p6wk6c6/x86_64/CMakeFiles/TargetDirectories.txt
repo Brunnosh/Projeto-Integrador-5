@@ -1,0 +1,2 @@
+C:/Users/55199/Desktop/projeto integrador/Projeto-Integrador-5/frontend/android/app/.cxx/Debug/5p6wk6c6/x86_64/CMakeFiles/edit_cache.dir
+C:/Users/55199/Desktop/projeto integrador/Projeto-Integrador-5/frontend/android/app/.cxx/Debug/5p6wk6c6/x86_64/CMakeFiles/rebuild_cache.dir

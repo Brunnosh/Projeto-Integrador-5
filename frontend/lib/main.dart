@@ -38,10 +38,7 @@ class _HelloScreenState extends State<HelloScreen> {
   Future<void> fetchHello() async {
     try {
       // 10.0.2.2 é o IP que representa "localhost" dentro do emulador Android
-      final response = await http.get(Uri.parse('http://localhost:8000/hello'));
-
-
-
+      final response = await http.get(Uri.parse('http://10.0.2.2:8000/hello'));
       if (response.statusCode == 200) {
         setState(() {
           message = json.decode(response.body)['message'];
