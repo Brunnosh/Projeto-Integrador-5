@@ -42,6 +42,8 @@ class _HelloScreenState extends State<HelloScreen> {
       if (response.statusCode == 200) {
         setState(() {
           message = json.decode(response.body)['message'];
+          
+
         });
       } else {
         setState(() {
@@ -57,11 +59,27 @@ class _HelloScreenState extends State<HelloScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("MyWallet")),
-      body: Center(
-        child: Text(message, style: const TextStyle(fontSize: 24)),
-      ),
+    return MaterialApp(
+      debugShowCheckedModeBanner:false,
+      home:Scaffold(
+        body: ListView(
+          //scrollDirection: Axis.horizontal,
+         children:[
+          Container(
+            height: 350,
+            color : Colors.green,
+          ),
+          Container(
+            height: 350,
+            color : Colors.green[400],
+          ),
+          Container(
+            height: 350,
+            color : Colors.green[200],
+          ),
+         ]
+        ),
+      )
     );
   }
 }
