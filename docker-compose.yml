@@ -1,9 +1,31 @@
+version: '3.8'
+
 services:
   backend:
     build:
       context: ./backend
     ports:
       - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/projeto_integrador
+
+  db:
+    image: postgres:13
+    restart: always
+    container_name: projeto-integrador-db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: projeto_integrador
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+volumes:
+  db_data:
   # frontend:
   #   build:
   #     context: ./frontend
