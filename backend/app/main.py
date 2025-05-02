@@ -7,9 +7,7 @@ from app.api import esqueceu_senha
 app = FastAPI()
 
 app.include_router(cadastro.router)
-
 app.include_router(login.router)
-
 app.include_router(esqueceu_senha.router)
 
 @app.get("/hello")

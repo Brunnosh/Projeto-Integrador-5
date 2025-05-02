@@ -1,3 +1,81 @@
-.vscode
+# backend secrets
+backend/.env
 
-.venv
+# Flutter
+build/
+frontend/build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.flutter-*
+.packages
+.metadata
+**/local.properties
+frontend/ios/Pods/
+frontend/ios/Runner.xcworkspace/
+frontend/ios/Flutter/Flutter.framework
+frontend/ios/Flutter/Flutter.podspec
+
+# Android
+android/local.properties
+android/.gradle/
+android/captures/
+android/app/build/
+android/build/
+android/.cxx/
+.cxx/
+.gradle/
+.externalNativeBuild/
+android/app/src/debug/
+android/app/src/profile/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+dist/
+build/
+eggs/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*,cover
+
+# Virtual environments
+.venv/
+
+# Pyenv
+.python-version
+
+# IDEs and editors
+.vscode/
+*.iml
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
