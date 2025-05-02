@@ -1,2 +1,0 @@
-C:/Users/55199/Desktop/projeto integrador/Projeto-Integrador-5/frontend/android/app/.cxx/Debug/6i3e4g45/armeabi-v7a/CMakeFiles/edit_cache.dir
-C:/Users/55199/Desktop/projeto integrador/Projeto-Integrador-5/frontend/android/app/.cxx/Debug/6i3e4g45/armeabi-v7a/CMakeFiles/rebuild_cache.dir
