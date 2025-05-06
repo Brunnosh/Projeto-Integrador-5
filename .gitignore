@@ -17,17 +17,17 @@ frontend/ios/Flutter/Flutter.framework
 frontend/ios/Flutter/Flutter.podspec
 
 # Android
-android/local.properties
-android/.gradle/
-android/captures/
-android/app/build/
-android/build/
-android/.cxx/
+frontend/android/local.properties
+frontend/android/.gradle/
+frontend/android/captures/
+frontend/android/app/build/
+frontend/android/build/
+frontend/android/.cxx/
 .cxx/
 .gradle/
 .externalNativeBuild/
-android/app/src/debug/
-android/app/src/profile/
+frontend/android/app/src/debug/
+frontend/android/app/src/profile/
 
 # Python
 __pycache__/
