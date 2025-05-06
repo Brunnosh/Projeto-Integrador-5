@@ -28,7 +28,7 @@ def get_db():
 def esqueci_senha(dados: EsqueciSenhaRequest, db: Session = Depends(get_db)):
     usuario = db.query(Login).filter_by(email=dados.email).first()
     if not usuario:
-        raise HTTPException(status_code=404, detail="Email não encontrado.")
+        return {"mensagem": "Se o e-mail já estiver registrado, enviaremos um link para redefinir a senha."}
 
     token = gerar_token_reset(usuario.email)
     
@@ -39,7 +39,7 @@ def esqueci_senha(dados: EsqueciSenhaRequest, db: Session = Depends(get_db)):
 
     email.enviar_email(dados.email, "Redefinição de Senha", corpo_email, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD)
 
-    return {"mensagem": "E-mail para redefinir senha enviado."}
+    return {"mensagem": "Se o e-mail já estiver registrado, enviaremos um link para redefinir a senha."}
 
 @router.post("/resetar-senha")
 def resetar_senha(dados: RedefinirSenhaRequest, db: Session = Depends(get_db)):
