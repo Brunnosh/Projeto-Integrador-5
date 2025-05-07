@@ -34,15 +34,7 @@ services:
         - "8080:80"
       depends_on:
         - backend
-  
-  apk_builder:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    entrypoint: >
-      sh -c "flutter pub get && flutter build apk --release"
-    volumes:
-      - ./apk_output:/app/build/app/outputs/flutter-apk
-    
+
+
 volumes:
   db_data:
