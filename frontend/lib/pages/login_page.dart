@@ -28,8 +28,8 @@ class _LoginPageState extends State<LoginPage> {
     print('Response Body: ${response.body}');
 
     if (response.statusCode == 200) {
-      // final dados = json.decode(response.body);
-      // print(dados);
+      final dados = json.decode(response.body);
+      print(dados);
       Navigator.pushReplacementNamed(context, '/home');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(

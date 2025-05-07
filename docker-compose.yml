@@ -4,6 +4,7 @@ services:
   backend:
     build:
       context: ./backend
+      # context: .
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
@@ -24,16 +25,24 @@ services:
     env_file:
       - ./backend/.env
   
-  # frontend:
-  #   build:
-  #     context: ./frontend
-  #     dockerfile: Dockerfile
-  #   platform: linux/amd64
-  #   ports:
-  #     - "8080:80"
-  #   depends_on:
-  #     - backend
-
-
+  frontend:
+      build:
+        context: ./frontend
+        dockerfile: Dockerfile
+      platform: linux/amd64
+      ports:
+        - "8080:80"
+      depends_on:
+        - backend
+  
+  apk_builder:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    entrypoint: >
+      sh -c "flutter pub get && flutter build apk --release"
+    volumes:
+      - ./apk_output:/app/build/app/outputs/flutter-apk
+    
 volumes:
   db_data:
