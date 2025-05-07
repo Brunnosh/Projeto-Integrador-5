@@ -1,6 +1,9 @@
 # backend secrets
 backend/.env
 
+# logs
+*.log
+
 # Flutter
 build/
 frontend/build/
@@ -28,6 +31,9 @@ frontend/android/.cxx/
 .externalNativeBuild/
 frontend/android/app/src/debug/
 frontend/android/app/src/profile/
+apk_output/
+*.apk
+*.sha1
 
 # Python
 __pycache__/
