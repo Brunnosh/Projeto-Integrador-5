@@ -28,8 +28,8 @@ class _LoginPageState extends State<LoginPage> {
     print('Response Body: ${response.body}');
 
     if (response.statusCode == 200) {
-      final dados = json.decode(response.body);
-      print(dados);
+      // final dados = json.decode(response.body);
+      // print(dados);
       Navigator.pushReplacementNamed(context, '/home');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -37,7 +37,7 @@ class _LoginPageState extends State<LoginPage> {
       );
     }
   }
-  
+
   void _login() {
     if (_formKey.currentState!.validate()) {
       final email = _emailController.text;
@@ -58,7 +58,8 @@ class _LoginPageState extends State<LoginPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.account_balance_wallet_rounded, size: 64, color: Colors.blue),
+                const Icon(Icons.account_balance_wallet_rounded,
+                    size: 64, color: Colors.blue),
                 const SizedBox(height: 16),
                 Text(
                   'MyFinance',
@@ -75,8 +76,9 @@ class _LoginPageState extends State<LoginPage> {
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.email),
                   ),
-                  validator: (value) =>
-                      value == null || !value.contains('@') ? 'Digite um e-mail válido' : null,
+                  validator: (value) => value == null || !value.contains('@')
+                      ? 'Digite um e-mail válido'
+                      : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -87,8 +89,9 @@ class _LoginPageState extends State<LoginPage> {
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.lock),
                   ),
-                  validator: (value) =>
-                      value != null && value.length >= 6 ? null : 'Senha inválida',
+                  validator: (value) => value != null && value.length >= 6
+                      ? null
+                      : 'Senha inválida',
                 ),
                 const SizedBox(height: 12),
                 Align(
@@ -97,7 +100,8 @@ class _LoginPageState extends State<LoginPage> {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const ForgotPasswordPage()),
+                        MaterialPageRoute(
+                            builder: (context) => const ForgotPasswordPage()),
                       );
                     },
                     style: TextButton.styleFrom(
@@ -130,7 +134,8 @@ class _LoginPageState extends State<LoginPage> {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.blue,
                     side: const BorderSide(color: Colors.blue),
-                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 16, horizontal: 24),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),

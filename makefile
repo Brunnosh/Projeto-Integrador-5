@@ -1,24 +1,47 @@
-# Where the built APK will land (and be pulled from)
-APK_OUTPUT_DIR  := apk_output
-APK_OUTPUT_PATH := $(APK_OUTPUT_DIR)/app-release.apk
+# ════════════════ Paths / artefacts ═════════════════════════════════
+APK_OUT_RELEASE := frontend\build\app\outputs\flutter-apk\app-release.apk
+APK_OUT_DEBUG   := frontend\build\app\outputs\flutter-apk\app-debug.apk
 
-.PHONY: build-apk install-apk full-install clean
+# ════════════════ Phony targets ═════════════════════════════════════
+.PHONY: up build-release build-debug \
+        install-release install-debug \
+        full-release debug-run clean
 
-build-apk:
-	if not exist $(APK_OUTPUT_DIR) mkdir $(APK_OUTPUT_DIR)
+# ────────────────────────────────────────────────────────────────────
+# 1) Bring backend + DB up (detached)
+up:
 	docker compose up -d backend db
-	docker compose run --rm apk_builder
 
-install-apk:
-	if not exist $(APK_OUTPUT_PATH) ( \
-		echo ❌ APK not found && exit /b 1 \
-	)
-	adb devices | findstr /C:"device" >nul || ( \
-		echo ❌ No device/emulator online && exit /b 1 \
-	)
-	adb install -r $(APK_OUTPUT_PATH)
+# ────────────────────────────────────────────────────────────────────
+# 2) Build APKs natively (requires Flutter SDK on host)
+build-release:
+	cd frontend && flutter clean && flutter pub get && flutter build apk --release
 
-full-install: build-apk install-apk
+build-debug:
+	cd frontend && flutter clean && flutter pub get && flutter build apk --debug
 
+# ────────────────────────────────────────────────────────────────────
+# 3) Install APKs on attached device / emulator
+install-release: $(APK_OUT_RELEASE)
+	adb devices | findstr /C:"device" >nul || (echo ❌ No device/emulator & exit /b 1)
+	adb install -r $(APK_OUT_RELEASE)
+
+install-debug: $(APK_OUT_DEBUG)
+	adb devices | findstr /C:"device" >nul || (echo ❌ No device/emulator & exit /b 1)
+	adb install -r $(APK_OUT_DEBUG)
+
+# Build *and* install release in one go
+full-release: build-release install-release
+
+# ────────────────────────────────────────────────────────────────────
+# 4) Live debug / break-points (runs on host, hot-reload enabled)
+debug-run: up
+	@echo Launching Flutter in DEBUG mode...
+	adb start-server
+	adb devices | findstr /C:"device" >nul || (echo ❌ No device/emulator & exit /b 1)
+	cd frontend && flutter pub get && flutter run -d emulator-5554
+
+# ────────────────────────────────────────────────────────────────────
+# 5) Clean all Flutter build artefacts
 clean:
-	if exist $(APK_OUTPUT_DIR) rmdir /s /q $(APK_OUTPUT_DIR)
+	cd frontend && flutter clean
