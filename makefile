@@ -6,6 +6,7 @@ APK_OUTPUT_PATH := $(APK_OUTPUT_DIR)/app-release.apk
 
 build-apk:
 	if not exist $(APK_OUTPUT_DIR) mkdir $(APK_OUTPUT_DIR)
+	docker compose up -d backend db
 	docker compose run --rm apk_builder
 
 install-apk:
