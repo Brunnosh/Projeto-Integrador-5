@@ -23,12 +23,9 @@ def cadastrar_usuario(dados: UsuarioCreate, db: Session = Depends(get_db)):
         email=dados.email,
         senha=hash_senha(dados.senha)
     )
-
     db.add(login)
     db.commit()
     db.refresh(login)
-
-
 
     endereco = endereco_model.Endereco(
         cep=dados.endereco.cep,
