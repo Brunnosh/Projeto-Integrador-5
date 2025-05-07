@@ -1,85 +1,30 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'pages/login_page.dart';
+import 'pages/register_page.dart';
+import 'pages/home_page.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const MyFinanceApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class MyFinanceApp extends StatelessWidget {
+  const MyFinanceApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'MyWallet App',
-      theme: ThemeData(primarySwatch: Colors.green),
-      home: const HelloScreen(),
-    );
-  }
-}
-
-class HelloScreen extends StatefulWidget {
-  const HelloScreen({super.key});
-
-  @override
-  State<HelloScreen> createState() => _HelloScreenState();
-}
-
-class _HelloScreenState extends State<HelloScreen> {
-  String message = "Carregando...";
-
-  @override
-  void initState() {
-    super.initState();
-    fetchHello();
-  }
-
-  Future<void> fetchHello() async {
-    try {
-      // 10.0.2.2 é o IP que representa "localhost" dentro do emulador Android
-      final response = await http.get(Uri.parse('http://10.0.2.2:8000/hello'));
-      if (response.statusCode == 200) {
-        setState(() {
-          message = json.decode(response.body)['message'];
-          
-
-        });
-      } else {
-        setState(() {
-          message = "Erro da API: ${response.statusCode}";
-        });
-      }
-    } catch (e) {
-      setState(() {
-        message = "Erro de conexão: $e";
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner:false,
-      home:Scaffold(
-        body: ListView(
-          //scrollDirection: Axis.horizontal,
-         children:[
-          Container(
-            height: 350,
-            color : Colors.green,
-          ),
-          Container(
-            height: 350,
-            color : Colors.green[400],
-          ),
-          Container(
-            height: 350,
-            color : Colors.green[200],
-          ),
-         ]
-        ),
-      )
+      title: 'MyFinance',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
+        useMaterial3: true,
+      ),
+      debugShowCheckedModeBanner: false,
+      initialRoute: '/login',
+      routes: {
+        '/login': (context) => const LoginPage(),
+        '/register': (context) => const RegisterPage(),
+        '/home': (context) => const HomePage(),
+      },
     );
   }
 }
