@@ -1,5 +1,5 @@
 # Usa uma imagem base do Flutter para web
-FROM flutter/flutter:stable
+FROM ghcr.io/cirruslabs/flutter:3.29.3 AS build
 
 # Define o diretório de trabalho
 WORKDIR /app
@@ -7,23 +7,13 @@ WORKDIR /app
 # Copia os arquivos do projeto Flutter
 COPY . .
 
-# Executa o build para web
-RUN flutter build web --release
+# Certifica que o gradle está em formato unix/apk/web 
+RUN apt-get update && apt-get install -y dos2unix \
+ && dos2unix android/gradlew \
+ && chmod +x android/gradlew
 
-# Usa um servidor web leve para servir os arquivos buildados
-FROM nginx:alpine
+ RUN rm -f android/local.properties
 
-# Remove a configuração padrão do nginx
-RUN rm /etc/nginx/conf.d/default.conf
-
-# Copia a configuração do nginx para servir o build do Flutter
-COPY nginx.conf /etc/nginx/conf.d
-
-# Copia os arquivos buildados do Flutter para a pasta de arquivos do nginx
-COPY --from=0 /app/build/web /usr/share/nginx/html
-
-# Expõe a porta 80 para acesso
-EXPOSE 80
-
-# Comando para iniciar o nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Executa o build para web/android
+RUN flutter pub get \
+ && flutter build apk --release
