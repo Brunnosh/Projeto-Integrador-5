@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'forgot_password_page.dart';
+import '../utils/environment.dart';
+
+String _loginUrl = '';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
-
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
@@ -15,10 +17,25 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
+  @override
+  void initState() {
+    super.initState();
+    _setupApiUrl();
+  }
+
+  Future<void> _setupApiUrl() async {
+    final isEmulator = await isRunningOnEmulator();
+    setState(() {
+      _loginUrl = isEmulator
+          ? 'http://10.0.2.2:8000/login' // URL para emulador Android
+          : 'http://localhost:8000/login'; // URL para dispositivo físico ou em desktop
+    });
+  }
+
   Future<void> _fazerLogin(String email, String senha) async {
-    const url = 'http://10.0.2.2:8000/login';
+    // const url = 'http://10.0.2.2:8000/login';
     final response = await http.post(
-      Uri.parse(url),
+      Uri.parse(_loginUrl),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({'email': email, 'senha': senha}),
     );

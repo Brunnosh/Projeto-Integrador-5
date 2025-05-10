@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../utils/environment.dart';
+
+String _cadastroUrl = '';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -10,6 +13,21 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
+  @override
+  void initState() {
+    super.initState();
+    _setupApiUrl();
+  }
+
+  Future<void> _setupApiUrl() async {
+    final isEmulator = await isRunningOnEmulator();
+    setState(() {
+      _cadastroUrl = isEmulator
+          ? 'http://10.0.2.2:8000/cadastro' // URL para emulador Android
+          : 'http://localhost:8000/cadastro'; // URL para dispositivo físico ou em desktop
+    });
+  }
+
   int _currentStep = 0;
 
   final _firstNameController = TextEditingController();
@@ -56,7 +74,8 @@ class _RegisterPageState extends State<RegisterPage> {
   };
 
   Future<void> registerUser() async {
-    final apiUrl = 'http://localhost:8000/cadastro';
+    // final apiUrl = 'http://localhost:8000/cadastro';
+    // const apiUrl = 'http://10.0.2.2:8000/cadastro';
     final requestBody = {
       'nome': _firstNameController.text,
       'sobrenome': _lastNameController.text,
@@ -76,7 +95,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
     try {
       final response = await http.post(
-        Uri.parse(apiUrl),
+        Uri.parse(_cadastroUrl),
         headers: {'Content-Type': 'application/json'},
         body: json.encode(requestBody),
       );
