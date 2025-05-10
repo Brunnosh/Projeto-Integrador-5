@@ -33,20 +33,13 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _fazerLogin(String email, String senha) async {
-    // const url = 'http://10.0.2.2:8000/login';
     final response = await http.post(
       Uri.parse(_loginUrl),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({'email': email, 'senha': senha}),
     );
 
-    // Verificar o status da resposta
-    print('Status Code: ${response.statusCode}');
-    print('Response Body: ${response.body}');
-
     if (response.statusCode == 200) {
-      // final dados = json.decode(response.body);
-      // print(dados);
       Navigator.pushReplacementNamed(context, '/home');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(

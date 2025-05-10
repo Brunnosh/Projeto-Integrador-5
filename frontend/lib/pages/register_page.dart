@@ -29,6 +29,7 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   int _currentStep = 0;
+  final _formKey = GlobalKey<FormState>();
 
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
@@ -74,8 +75,10 @@ class _RegisterPageState extends State<RegisterPage> {
   };
 
   Future<void> registerUser() async {
-    // final apiUrl = 'http://localhost:8000/cadastro';
-    // const apiUrl = 'http://10.0.2.2:8000/cadastro';
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
     final requestBody = {
       'nome': _firstNameController.text,
       'sobrenome': _lastNameController.text,
@@ -101,13 +104,27 @@ class _RegisterPageState extends State<RegisterPage> {
       );
 
       if (response.statusCode == 200) {
-        print('Usuário cadastrado com sucesso');
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Usuário cadastrado com sucesso!'),
+            ),
+          );
+          await Future.delayed(const Duration(seconds: 1));
+          Navigator.pushReplacementNamed(context, '/home');
+        }
       } else {
-        print('Falha ao cadastrar usuário: ${response.body}');
+        _showSnackbar('Falha ao cadastrar usuário: ${response.body}');
       }
     } catch (e) {
-      print('Erro ao cadastrar usuário: $e');
+      _showSnackbar('Erro ao cadastrar usuário: $e');
     }
+  }
+
+  void _showSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   void _onStepContinue() {
@@ -127,54 +144,63 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Criar Conta'),
-        backgroundColor: Colors.blue,
-      ),
-      body: Stepper(
-        currentStep: _currentStep,
-        onStepContinue: _onStepContinue,
-        onStepCancel: _onStepCancel,
-        steps: [
-          Step(
-            title: const Text('Dados Pessoais'),
-            content: Column(
-              children: [
-                _buildTextField('Nome', _firstNameController),
-                _buildTextField('Sobrenome', _lastNameController),
-                _buildDatePicker('Data de Nascimento'),
-                _buildTextField('E-mail', _emailController),
-                _buildTextField('Senha', _passwordController,
-                    obscureText: true),
-                _buildTextField('Confirmar Senha', _confirmPasswordController,
-                    obscureText: true),
-              ],
-            ),
+        appBar: AppBar(
+          backgroundColor: Colors.blue,
+          foregroundColor: Colors.white, // Deixa o título e ícone brancos
+          iconTheme: const IconThemeData(
+              color: Colors.white), // Garante que o ícone "voltar" fique branco
+          title: const Text('Criar Conta'),
+          elevation: 0,
+        ),
+        body: Form(
+          key: _formKey,
+          child: Stepper(
+            currentStep: _currentStep,
+            onStepContinue: _onStepContinue,
+            onStepCancel: _onStepCancel,
+            steps: [
+              Step(
+                title: const Text('Dados Pessoais'),
+                content: Column(
+                  children: [
+                    _buildTextField('Nome', _firstNameController),
+                    _buildTextField('Sobrenome', _lastNameController),
+                    _buildDatePicker('Data de Nascimento'),
+                    _buildTextField('E-mail', _emailController,
+                        validator: _validateEmail),
+                    _buildTextField('Senha', _passwordController,
+                        obscureText: true, validator: _validatePassword),
+                    _buildTextField(
+                        'Confirmar Senha', _confirmPasswordController,
+                        obscureText: true, validator: _validateConfirmPassword),
+                  ],
+                ),
+              ),
+              Step(
+                title: const Text('Endereço'),
+                content: Column(
+                  children: [
+                    _buildDropdown(
+                        'Estado', _stateMap.keys.toList(), _selectedState),
+                    _buildTextField('CEP', _cepController),
+                    _buildTextField('Bairro', _neighborhoodController),
+                    _buildTextField('Rua', _streetController),
+                    _buildTextField('Numero', _numberController),
+                    _buildTextField('Complemento', _complementController),
+                  ],
+                ),
+              ),
+            ],
           ),
-          Step(
-            title: const Text('Endereço'),
-            content: Column(
-              children: [
-                _buildDropdown(
-                    'Estado', _stateMap.keys.toList(), _selectedState),
-                _buildTextField('CEP', _cepController),
-                _buildTextField('Bairro', _neighborhoodController),
-                _buildTextField('Rua', _streetController),
-                _buildTextField('Numero', _numberController),
-                _buildTextField('Complemento', _complementController),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+        ));
   }
 
   Widget _buildTextField(String label, TextEditingController controller,
-      {bool obscureText = false}) {
-    return TextField(
+      {bool obscureText = false, String? Function(String?)? validator}) {
+    return TextFormField(
       controller: controller,
       obscureText: obscureText,
+      validator: validator,
       decoration: InputDecoration(labelText: label),
     );
   }
@@ -221,5 +247,34 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
       ],
     );
+  }
+
+  // Validações simples para os campos
+  String? _validateEmail(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'E-mail é obrigatório';
+    }
+    final regex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+    if (!regex.hasMatch(value)) {
+      return 'E-mail inválido';
+    }
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Senha é obrigatória';
+    }
+    return null;
+  }
+
+  String? _validateConfirmPassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Confirmar senha é obrigatório';
+    }
+    if (value != _passwordController.text) {
+      return 'As senhas não coincidem';
+    }
+    return null;
   }
 }
