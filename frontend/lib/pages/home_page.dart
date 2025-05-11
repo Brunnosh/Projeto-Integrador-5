@@ -1,5 +1,9 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -29,24 +33,73 @@ class _HomePageState extends State<HomePage> {
 
   final List<String> years = ['2023', '2024', '2025'];
 
-  String userEmail = '';
-
   double saldo = 1500.0;
   double receitas = 3000.0;
   double despesas = 1500.0;
 
+  String userEmail = '';
+  String _userApiUrl = '';
+
   @override
   void initState() {
     super.initState();
-    _carregarUsuario();
+    _setupApiUrl();
   }
 
-  Future<void> _carregarUsuario() async {
-    final prefs = await SharedPreferences.getInstance();
-    final email = prefs.getString('userEmail');
+  Future<bool> isRunningOnEmulator() async {
+    final deviceInfo = DeviceInfoPlugin();
+    if (Platform.isAndroid) {
+      final androidInfo = await deviceInfo.androidInfo;
+      return !androidInfo.isPhysicalDevice;
+    } else if (Platform.isIOS) {
+      final iosInfo = await deviceInfo.iosInfo;
+      return !iosInfo.isPhysicalDevice;
+    }
+    return false;
+  }
+
+  Future<void> _setupApiUrl() async {
+    final isEmulator = await isRunningOnEmulator();
     setState(() {
-      userEmail = email ?? 'Erro no login';
+      _userApiUrl =
+          isEmulator ? 'http://10.0.2.2:8000/me' : 'http://localhost:8000/me';
     });
+    _getUserEmail();
+  }
+
+  Future<void> _getUserEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+
+    if (token == null) {
+      setState(() {
+        userEmail = 'Token não encontrado';
+      });
+      return;
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse(_userApiUrl),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          userEmail = data['email'];
+          prefs.setString('userId', data['id'].toString());
+        });
+      } else {
+        setState(() {
+          userEmail = 'Erro ao obter e-mail';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        userEmail = 'Erro de conexão';
+      });
+    }
   }
 
   void _showAddOptions() {
