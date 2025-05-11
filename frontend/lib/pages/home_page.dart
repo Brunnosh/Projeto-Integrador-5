@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -28,11 +29,25 @@ class _HomePageState extends State<HomePage> {
 
   final List<String> years = ['2023', '2024', '2025'];
 
-  String userEmail = 'usuario@email.com'; // Altere para o email real
+  String userEmail = '';
 
   double saldo = 1500.0;
   double receitas = 3000.0;
   double despesas = 1500.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarUsuario();
+  }
+
+  Future<void> _carregarUsuario() async {
+    final prefs = await SharedPreferences.getInstance();
+    final email = prefs.getString('userEmail');
+    setState(() {
+      userEmail = email ?? 'Erro no login';
+    });
+  }
 
   void _showAddOptions() {
     showModalBottomSheet(
