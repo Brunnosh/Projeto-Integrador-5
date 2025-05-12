@@ -112,16 +112,14 @@ class _HomePageState extends State<HomePage> {
             leading: const Icon(Icons.add_circle_outline),
             title: const Text('Adicionar Receita'),
             onTap: () {
-              Navigator.pop(context);
-              // Navegar para adicionar receita
+              Navigator.pushNamed(context, '/inserir-receitas');
             },
           ),
           ListTile(
             leading: const Icon(Icons.remove_circle_outline),
             title: const Text('Adicionar Despesa'),
             onTap: () {
-              Navigator.pop(context);
-              // Navegar para adicionar despesa
+              Navigator.pushNamed(context, '/inserir-despesas');
             },
           ),
         ],

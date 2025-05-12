@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'pages/login_page.dart';
 import 'pages/register_page.dart';
 import 'pages/home_page.dart';
+import 'pages/inserir_despesas.dart';
 
 void main() {
   runApp(const MyFinanceApp());
@@ -24,6 +25,7 @@ class MyFinanceApp extends StatelessWidget {
         '/login': (context) => const LoginPage(),
         '/register': (context) => const RegisterPage(),
         '/home': (context) => const HomePage(),
+        '/inserir-despesas': (context) => const InserirDespesaPage(),
       },
     );
   }
