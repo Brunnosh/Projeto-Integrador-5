@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, Float
+from sqlalchemy import Column, Integer, String, Date, Float, Boolean
 from app.db import Base
 
 class Receitas(Base):
@@ -9,4 +9,4 @@ class Receitas(Base):
     descricao = Column(String, nullable=False)
     valor = Column(Float, nullable=False)
     data_recebimento = Column(Date)
-    id_tipo = Column(Integer)
+    recorrencia = Column(Boolean, nullable=False)

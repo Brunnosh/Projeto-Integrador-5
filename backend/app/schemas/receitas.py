@@ -6,4 +6,4 @@ class ReceitaCreate(BaseModel):
     descricao: str
     valor: float
     data_recebimento: date
-    id_tipo: int
+    recorrencia: bool

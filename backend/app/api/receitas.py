@@ -20,7 +20,7 @@ def inserir_receita(dados: ReceitaCreate, db: Session = Depends(get_db)):
         descricao=dados.descricao,
         valor=dados.valor,
         data_recebimento=dados.data_recebimento,
-        id_tipo=dados.id_tipo
+        recorrencia=dados.recorrencia
     )
     db.add(nova_receita)
     db.commit()
