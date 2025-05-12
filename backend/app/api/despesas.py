@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.orm import Session
 from app.db import SessionLocal
 from app.models.despesas import Despesas
@@ -27,3 +27,17 @@ def inserir_despesa(dados: DespesasCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(nova_despesa)
     return {"mensagem": "Despesa inserida com sucesso", "despesa_id": nova_despesa.id}
+
+@router.get("/total-despesas")
+def total_despesas(id_login: str = Query(...), db: Session = Depends(get_db)):
+    despesas = db.query(Despesas).filter(Despesas.id_login == id_login).all()
+    
+    if not despesas:
+        raise HTTPException(status_code=404, detail="Nenhuma despesa encontrada para esse usuário.")
+
+    total = sum(r.valor for r in despesas)
+    
+    return {
+        "id_login": id_login,
+        "total_despesas": total
+    }

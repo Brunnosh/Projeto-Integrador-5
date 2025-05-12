@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.orm import Session
 from app.db import SessionLocal
 from app.models.receitas import Receitas
@@ -26,3 +26,17 @@ def inserir_receita(dados: ReceitaCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(nova_receita)
     return {"mensagem": "Receita inserida com sucesso", "receita_id": nova_receita.id}
+
+@router.get("/total-receitas")
+def total_receitas(id_login: str = Query(...), db: Session = Depends(get_db)):
+    receitas = db.query(Receitas).filter(Receitas.id_login == id_login).all()
+    
+    if not receitas:
+        raise HTTPException(status_code=404, detail="Nenhuma receita encontrada para esse usuário.")
+
+    total = sum(r.valor for r in receitas)
+    
+    return {
+        "id_login": id_login,
+        "total_receitas": total
+    }
