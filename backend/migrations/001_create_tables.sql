@@ -1,5 +1,5 @@
 CREATE TABLE public.login (
-	id serial NOT NULL,
+	id serial PRIMARY KEY,
 	email varchar NOT NULL,
 	senha varchar NOT NULL,
 	CONSTRAINT login_unique UNIQUE (email)

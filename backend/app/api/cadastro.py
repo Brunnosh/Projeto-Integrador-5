@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.db import SessionLocal
 from app.models import login as login_model, endereco as endereco_model, dados_usuarios as usuario_model
 from app.schemas.cadastro import UsuarioCreate
-from app.utils.security import hash_senha
+from app.utils import security, token
 
 router = APIRouter()
 
@@ -21,7 +21,7 @@ def cadastrar_usuario(dados: UsuarioCreate, db: Session = Depends(get_db)):
 
     login = login_model.Login(
         email=dados.email,
-        senha=hash_senha(dados.senha)
+        senha=security.hash_senha(dados.senha)
     )
     db.add(login)
     db.commit()
@@ -49,4 +49,6 @@ def cadastrar_usuario(dados: UsuarioCreate, db: Session = Depends(get_db)):
     db.add(usuario)
     db.commit()
 
-    return {"message": "Usuário cadastrado com sucesso!"}
+    access_token = token.gerar_token_acesso(dados.email)
+
+    return {"access_token": access_token, "token_type": "bearer"}

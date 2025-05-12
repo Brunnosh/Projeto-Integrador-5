@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../utils/environment.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 String _cadastroUrl = '';
 
@@ -104,14 +105,18 @@ class _RegisterPageState extends State<RegisterPage> {
       );
 
       if (response.statusCode == 200) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Usuário cadastrado com sucesso!'),
-            ),
-          );
-          await Future.delayed(const Duration(seconds: 1));
-          Navigator.pushReplacementNamed(context, '/home');
+        final responseData = json.decode(response.body);
+        final token = responseData['access_token'];
+
+        if (token != null) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('access_token', token);
+
+          if (context.mounted) {
+            Navigator.pushReplacementNamed(context, '/home');
+          }
+        } else {
+          _showSnackbar('Token não encontrado na resposta.');
         }
       } else {
         _showSnackbar('Falha ao cadastrar usuário: ${response.body}');
