@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'forgot_password_page.dart';
 import '../utils/environment.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 String _loginUrl = '';
 
@@ -40,6 +41,13 @@ class _LoginPageState extends State<LoginPage> {
     );
 
     if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      final accessToken = data['access_token'];
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('access_token', accessToken);
+      await prefs.setString('userEmail', email);
+
       Navigator.pushReplacementNamed(context, '/home');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -99,7 +107,7 @@ class _LoginPageState extends State<LoginPage> {
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.lock),
                   ),
-                  validator: (value) => value != null && value.length >= 6
+                  validator: (value) => value != null && value.length >= 8
                       ? null
                       : 'Senha inválida',
                 ),
