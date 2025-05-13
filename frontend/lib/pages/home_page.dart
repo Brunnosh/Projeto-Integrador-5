@@ -162,15 +162,19 @@ class _HomePageState extends State<HomePage> {
           ListTile(
             leading: const Icon(Icons.add_circle_outline),
             title: const Text('Adicionar Receita'),
-            onTap: () {
-              Navigator.pushNamed(context, '/inserir-receitas');
+            onTap: () async {
+              Navigator.pop(context);
+              await Navigator.pushNamed(context, '/inserir-receitas');
+              _loadData();
             },
           ),
           ListTile(
             leading: const Icon(Icons.remove_circle_outline),
             title: const Text('Adicionar Despesa'),
-            onTap: () {
-              Navigator.pushNamed(context, '/inserir-despesas');
+            onTap: () async {
+              Navigator.pop(context); // Fecha o BottomSheet
+              await Navigator.pushNamed(context, '/inserir-despesas');
+              _loadData(); // Atualiza os dados após retorno
             },
           ),
         ],
