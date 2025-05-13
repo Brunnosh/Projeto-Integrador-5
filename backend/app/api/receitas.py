@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, Depends, Query
+from datetime import date
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import extract
 from app.db import SessionLocal
@@ -37,17 +38,27 @@ def total_receitas(
     ano: int = Query(..., ge=1900),
     db: Session = Depends(get_db)
 ):
+    data_consulta = date(ano, mes, 1)
     receitas = (
         db.query(Receitas)
-        .filter(
-            Receitas.id_login == id_login,
-            extract("month", Receitas.data_recebimento) == mes,
-            extract("year", Receitas.data_recebimento) == ano
-        )
+        .filter(Receitas.id_login == id_login)
         .all()
     )
 
-    total = sum(r.valor for r in receitas) if receitas else 0
+    total = 0.0
+
+    for r in receitas:
+            data_base = r.data_recebimento.replace(day=1)
+            fim = r.fim_recorrencia.replace(day=1) if r.fim_recorrencia else None
+
+            if not r.recorrencia:
+                # Receita normal
+                if data_base == data_consulta:
+                    total += r.valor
+            else:
+                # Receita recorrente
+                if data_consulta >= data_base and (fim is None or data_consulta <= fim):
+                    total += r.valor
 
     return {
         "id_login": id_login,

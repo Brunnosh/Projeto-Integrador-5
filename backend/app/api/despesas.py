@@ -1,3 +1,4 @@
+from datetime import date
 from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import extract
@@ -37,17 +38,27 @@ def total_despesas(
     ano: int = Query(..., ge=1900),
     db: Session = Depends(get_db)
 ):
+    data_consulta = date(ano, mes, 1)
     despesas = (
         db.query(Despesas)
-        .filter(
-            Despesas.id_login == id_login,
-            extract("month", Despesas.data_vencimento) == mes,
-            extract("year", Despesas.data_vencimento) == ano
-        )
+        .filter(Despesas.id_login == id_login)
         .all()
     )
 
-    total = sum(r.valor for r in despesas) if despesas else 0
+    total = 0.0
+
+    for r in despesas:
+        data_base = r.data_vencimento.replace(day=1)
+        fim = r.fim_recorrencia.replace(day=1) if r.fim_recorrencia else None
+
+        if not r.recorrencia:
+            # Receita normal
+            if data_base == data_consulta:
+                total += r.valor
+        else:
+            # Receita recorrente
+            if data_consulta >= data_base and (fim is None or data_consulta <= fim):
+                total += r.valor
 
     return {
         "id_login": id_login,
