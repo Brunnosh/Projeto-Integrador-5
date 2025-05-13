@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import extract
 from app.db import SessionLocal
 from app.models.despesas import Despesas
 from app.schemas.despesas import DespesasCreate
@@ -29,15 +30,27 @@ def inserir_despesa(dados: DespesasCreate, db: Session = Depends(get_db)):
     return {"mensagem": "Despesa inserida com sucesso", "despesa_id": nova_despesa.id}
 
 @router.get("/total-despesas")
-def total_despesas(id_login: str = Query(...), db: Session = Depends(get_db)):
-    despesas = db.query(Despesas).filter(Despesas.id_login == id_login).all()
-    
-    if not despesas:
-        raise HTTPException(status_code=404, detail="Nenhuma despesa encontrada para esse usuário.")
+def total_despesas(
+    id_login: str = Query(...),
+    mes: int = Query(..., ge=1, le=12),
+    ano: int = Query(..., ge=1900),
+    db: Session = Depends(get_db)
+):
+    despesas = (
+        db.query(Despesas)
+        .filter(
+            Despesas.id_login == id_login,
+            extract("month", Despesas.data_vencimento) == mes,
+            extract("year", Despesas.data_vencimento) == ano
+        )
+        .all()
+    )
 
-    total = sum(r.valor for r in despesas)
-    
+    total = sum(r.valor for r in despesas) if despesas else 0
+
     return {
         "id_login": id_login,
-        "total_despesas": total
+        "mes": mes,
+        "ano": ano,
+        "total_receitas": total
     }
