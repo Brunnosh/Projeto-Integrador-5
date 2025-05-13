@@ -19,6 +19,7 @@ class _InserirReceitaPageState extends State<InserirReceitaPage> {
   final _descricaoController = TextEditingController();
   final _valorController = TextEditingController();
   DateTime? _selectedDate;
+  DateTime? _fimRecorrencia;
   bool _recorrente = false;
 
   @override
@@ -62,7 +63,8 @@ class _InserirReceitaPageState extends State<InserirReceitaPage> {
       'descricao': _descricaoController.text,
       'valor': double.tryParse(_valorController.text) ?? 0.0,
       'data_recebimento': _selectedDate!.toIso8601String().split('T')[0],
-      'recorrencia': _recorrente
+      'recorrencia': _recorrente,
+      'fim_recorrencia': _fimRecorrencia?.toIso8601String().split('T')[0],
     };
 
     try {
@@ -121,7 +123,9 @@ class _InserirReceitaPageState extends State<InserirReceitaPage> {
                   _buildTextField('Valor', _valorController,
                       keyboardType: TextInputType.number),
                   _buildDatePicker('Data de Recebimento'),
-                  _buildCheckbox('Recorrente', _recorrente)
+                  _buildCheckbox('Recorrente', _recorrente),
+                  if (_recorrente)
+                    _buildFimRecorrenciaPicker('Fim da Recorrência'),
                 ],
               ),
             ),
@@ -147,6 +151,39 @@ class _InserirReceitaPageState extends State<InserirReceitaPage> {
       title: Text(label),
       value: value,
       onChanged: (newValue) => setState(() => _recorrente = newValue ?? false),
+    );
+  }
+
+  Widget _buildFimRecorrenciaPicker(String label) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: () async {
+            final pickedDate = await showDatePicker(
+              context: context,
+              initialDate: DateTime.now(),
+              firstDate: DateTime(1900),
+              lastDate: DateTime(2100),
+            );
+            if (pickedDate != null) {
+              setState(() => _fimRecorrencia = pickedDate);
+            }
+          },
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.blue),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(_fimRecorrencia == null
+                ? 'Selecione a data (opcional)'
+                : _fimRecorrencia!.toIso8601String().split('T')[0]),
+          ),
+        ),
+      ],
     );
   }
 

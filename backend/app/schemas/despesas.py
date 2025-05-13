@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Optional
 from datetime import date
 
 class DespesasCreate(BaseModel):
@@ -8,3 +9,4 @@ class DespesasCreate(BaseModel):
     data_vencimento: date
     recorrencia: bool
     id_categoria: int
+    fim_recorrencia: Optional[date] = None

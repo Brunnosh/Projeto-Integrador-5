@@ -172,9 +172,9 @@ class _HomePageState extends State<HomePage> {
             leading: const Icon(Icons.remove_circle_outline),
             title: const Text('Adicionar Despesa'),
             onTap: () async {
-              Navigator.pop(context); // Fecha o BottomSheet
+              Navigator.pop(context);
               await Navigator.pushNamed(context, '/inserir-despesas');
-              _loadData(); // Atualiza os dados após retorno
+              _loadData();
             },
           ),
         ],

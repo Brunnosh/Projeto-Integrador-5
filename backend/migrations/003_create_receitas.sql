@@ -5,5 +5,6 @@ CREATE TABLE public.receitas (
     valor NUMERIC(10, 2) NOT NULL,
     data_recebimento DATE NOT NULL,
     recorrencia BOOLEAN NOT NULL,
+    fim_recorrencia DATE,
     CONSTRAINT fk_receitas_usuario FOREIGN KEY (id_login) REFERENCES public.login(id)
 );

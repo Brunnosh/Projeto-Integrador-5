@@ -22,6 +22,7 @@ def inserir_despesa(dados: DespesasCreate, db: Session = Depends(get_db)):
         valor=dados.valor,
         data_vencimento=dados.data_vencimento,
         recorrencia=dados.recorrencia,
+        fim_recorrencia=dados.fim_recorrencia,
         id_categoria = dados.id_categoria
     )
     db.add(nova_despesa)

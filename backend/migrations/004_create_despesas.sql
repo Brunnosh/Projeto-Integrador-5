@@ -10,6 +10,7 @@ CREATE TABLE public.despesas (
     valor NUMERIC(10, 2) NOT NULL,
     data_vencimento DATE NOT NULL,
     recorrencia BOOLEAN NOT NULL,
+    fim_recorrencia DATE,
     id_categoria INTEGER NOT NULL,
     CONSTRAINT fk_receitas_usuario FOREIGN KEY (id_login) REFERENCES public.login(id),
     CONSTRAINT fk_categoria FOREIGN KEY (id_categoria) REFERENCES public.categoria(id)

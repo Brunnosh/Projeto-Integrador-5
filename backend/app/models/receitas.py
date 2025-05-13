@@ -8,5 +8,6 @@ class Receitas(Base):
     id_login = Column(Integer, unique=True, index=True, nullable=False)
     descricao = Column(String, nullable=False)
     valor = Column(Float, nullable=False)
-    data_recebimento = Column(Date)
+    data_recebimento = Column(Date, nullable=False)
     recorrencia = Column(Boolean, nullable=False)
+    fim_recorrencia = Column(Date, nullable=True)

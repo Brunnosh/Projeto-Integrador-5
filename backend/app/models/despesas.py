@@ -11,3 +11,4 @@ class Despesas(Base):
     data_vencimento = Column(Date, nullable=False)
     recorrencia = Column(Boolean, nullable=False)
     id_categoria = Column(Integer, nullable=False)
+    fim_recorrencia = Column(Date, nullable=True)

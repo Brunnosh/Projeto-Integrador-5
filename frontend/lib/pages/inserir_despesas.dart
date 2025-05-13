@@ -20,6 +20,7 @@ class _InserirDespesaPageState extends State<InserirDespesaPage> {
   final _descricaoController = TextEditingController();
   final _valorController = TextEditingController();
   DateTime? _selectedDate;
+  DateTime? _fimRecorrencia;
   bool _recorrente = false;
 
   List<Map<String, dynamic>> _categorias = [];
@@ -90,6 +91,7 @@ class _InserirDespesaPageState extends State<InserirDespesaPage> {
       'valor': double.tryParse(_valorController.text) ?? 0.0,
       'data_vencimento': _selectedDate!.toIso8601String().split('T')[0],
       'recorrencia': _recorrente,
+      'fim_recorrencia': _fimRecorrencia?.toIso8601String().split('T')[0],
       'id_categoria': _idCategoriaSelecionada,
     };
 
@@ -152,6 +154,8 @@ class _InserirDespesaPageState extends State<InserirDespesaPage> {
                       keyboardType: TextInputType.number),
                   _buildDatePicker('Data de Vencimento'),
                   _buildCheckbox('Recorrente', _recorrente),
+                  if (_recorrente)
+                    _buildFimRecorrenciaPicker('Fim da Recorrência'),
                   _buildDropdownCategoria(),
                 ],
               ),
@@ -178,6 +182,39 @@ class _InserirDespesaPageState extends State<InserirDespesaPage> {
       title: Text(label),
       value: value,
       onChanged: (newValue) => setState(() => _recorrente = newValue ?? false),
+    );
+  }
+
+  Widget _buildFimRecorrenciaPicker(String label) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: () async {
+            final pickedDate = await showDatePicker(
+              context: context,
+              initialDate: DateTime.now(),
+              firstDate: DateTime(1900),
+              lastDate: DateTime(2100),
+            );
+            if (pickedDate != null) {
+              setState(() => _fimRecorrencia = pickedDate);
+            }
+          },
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.blue),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(_fimRecorrencia == null
+                ? 'Selecione a data (opcional)'
+                : _fimRecorrencia!.toIso8601String().split('T')[0]),
+          ),
+        ),
+      ],
     );
   }
 
