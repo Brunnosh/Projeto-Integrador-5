@@ -13,41 +13,42 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  String selectedMonth = 'Maio';
-  late String selectedYear;
-
-  final List<String> months = [
-    'Janeiro',
-    'Fevereiro',
-    'Março',
-    'Abril',
-    'Maio',
-    'Junho',
-    'Julho',
-    'Agosto',
-    'Setembro',
-    'Outubro',
-    'Novembro',
-    'Dezembro'
-  ];
-
+  late String selectedMonth, selectedYear;
   late List<String> years;
-
-  double saldo = 1500.0;
-  double receitas = 3000.0;
-  double despesas = 1500.0;
-
+  double saldo = 0.0;
+  double receitas = 0.0;
+  double despesas = 0.0;
   String userEmail = '';
   String _userApiUrl = '';
+  String _receitasUrl = '';
+  String _despesasUrl = '';
+
+  final Map<String, int> monthToNumber = {
+    'Janeiro': 1,
+    'Fevereiro': 2,
+    'Março': 3,
+    'Abril': 4,
+    'Maio': 5,
+    'Junho': 6,
+    'Julho': 7,
+    'Agosto': 8,
+    'Setembro': 9,
+    'Outubro': 10,
+    'Novembro': 11,
+    'Dezembro': 12,
+  };
 
   @override
   void initState() {
     super.initState();
 
     final currentYear = DateTime.now().year;
+    final currentMonth = DateTime.now().month;
     years = List.generate(11, (index) => (currentYear - 5 + index).toString());
     selectedYear = currentYear.toString();
-
+    selectedMonth = monthToNumber.entries
+        .firstWhere((entry) => entry.value == currentMonth)
+        .key;
     _setupApiUrl();
   }
 
@@ -65,11 +66,15 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _setupApiUrl() async {
     final isEmulator = await isRunningOnEmulator();
+    final baseUrl =
+        isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
     setState(() {
-      _userApiUrl =
-          isEmulator ? 'http://10.0.2.2:8000/me' : 'http://localhost:8000/me';
+      _userApiUrl = '$baseUrl/me';
+      _receitasUrl = '$baseUrl/total-receitas';
+      _despesasUrl = '$baseUrl/total-despesas';
     });
-    _getUserEmail();
+    await _getUserEmail();
+    _loadData();
   }
 
   Future<void> _getUserEmail() async {
@@ -103,6 +108,47 @@ class _HomePageState extends State<HomePage> {
     } catch (e) {
       setState(() {
         userEmail = 'Erro de conexão';
+      });
+    }
+  }
+
+  Future<void> _loadData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+    final userId = prefs.getString('userId');
+    final mes = monthToNumber[selectedMonth];
+
+    if (token == null) return;
+
+    Future<Map<String, double>> _fetchData(String url) async {
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return {'total': data['total'] ?? 0.0};
+      }
+      return {'total': 0.0};
+    }
+
+    try {
+      final receitasData = await _fetchData(
+          '$_receitasUrl?id_login=$userId&mes=$mes&ano=$selectedYear');
+
+      final despesasData = await _fetchData(
+          '$_despesasUrl?id_login=$userId&mes=$mes&ano=$selectedYear');
+
+      setState(() {
+        receitas = receitasData['total']!;
+        despesas = despesasData['total']!;
+        saldo = receitas - despesas;
+      });
+    } catch (e) {
+      setState(() {
+        receitas = 0.0;
+        despesas = 0.0;
+        saldo = 0.0;
       });
     }
   }
@@ -151,6 +197,39 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget _buildDropdown<T>({
+    required String label,
+    required String value,
+    required List<T> items,
+    required void Function(T?) onChanged,
+    required String Function(T) itemBuilder,
+  }) {
+    return Expanded(
+      child: DropdownButtonFormField<T>(
+        value: value as T?,
+        items: items
+            .map((item) => DropdownMenuItem<T>(
+                  value: item,
+                  child: Text(itemBuilder(item)),
+                ))
+            .toList(),
+        onChanged: onChanged,
+        isExpanded: true,
+        icon: const Icon(Icons.arrow_drop_down, color: Colors.blue),
+        style: const TextStyle(color: Colors.black, fontSize: 16),
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: const Icon(Icons.calendar_today),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -162,7 +241,7 @@ class _HomePageState extends State<HomePage> {
             onPressed: () {
               Navigator.pushReplacementNamed(context, '/login');
             },
-          )
+          ),
         ],
       ),
       body: Padding(
@@ -174,54 +253,26 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 20),
             Row(
               children: [
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                      value: selectedMonth,
-                      items: months
-                          .map(
-                              (m) => DropdownMenuItem(value: m, child: Text(m)))
-                          .toList(),
-                      onChanged: (value) {
-                        setState(() => selectedMonth = value!);
-                      },
-                      isExpanded: true,
-                      icon:
-                          const Icon(Icons.arrow_drop_down, color: Colors.blue),
-                      style: const TextStyle(color: Colors.black, fontSize: 16),
-                      decoration: InputDecoration(
-                        labelText: 'Mês',
-                        prefixIcon: const Icon(Icons.calendar_today),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 10),
-                      )),
+                _buildDropdown<String>(
+                  label: 'Mês',
+                  value: selectedMonth,
+                  items: monthToNumber.keys.toList(),
+                  onChanged: (value) {
+                    setState(() => selectedMonth = value!);
+                    _loadData();
+                  },
+                  itemBuilder: (item) => item,
                 ),
                 const SizedBox(width: 16),
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                      value: selectedYear,
-                      items: years
-                          .map(
-                              (y) => DropdownMenuItem(value: y, child: Text(y)))
-                          .toList(),
-                      onChanged: (value) {
-                        setState(() => selectedYear = value!);
-                      },
-                      isExpanded: true,
-                      icon:
-                          const Icon(Icons.arrow_drop_down, color: Colors.blue),
-                      style: const TextStyle(color: Colors.black, fontSize: 16),
-                      decoration: InputDecoration(
-                        labelText: 'Ano',
-                        prefixIcon: const Icon(Icons.calendar_today),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 10),
-                      )),
+                _buildDropdown<String>(
+                  label: 'Ano',
+                  value: selectedYear,
+                  items: years,
+                  onChanged: (value) {
+                    setState(() => selectedYear = value!);
+                    _loadData();
+                  },
+                  itemBuilder: (item) => item,
                 ),
               ],
             ),

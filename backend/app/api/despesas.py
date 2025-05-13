@@ -52,5 +52,5 @@ def total_despesas(
         "id_login": id_login,
         "mes": mes,
         "ano": ano,
-        "total_receitas": total
+        "total": total
     }
