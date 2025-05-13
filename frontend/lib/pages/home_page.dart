@@ -14,7 +14,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   String selectedMonth = 'Maio';
-  String selectedYear = '2025';
+  late String selectedYear;
 
   final List<String> months = [
     'Janeiro',
@@ -31,7 +31,7 @@ class _HomePageState extends State<HomePage> {
     'Dezembro'
   ];
 
-  final List<String> years = ['2023', '2024', '2025'];
+  late List<String> years;
 
   double saldo = 1500.0;
   double receitas = 3000.0;
@@ -43,6 +43,11 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+
+    final currentYear = DateTime.now().year;
+    years = List.generate(11, (index) => (currentYear - 5 + index).toString());
+    selectedYear = currentYear.toString();
+
     _setupApiUrl();
   }
 
@@ -171,28 +176,52 @@ class _HomePageState extends State<HomePage> {
               children: [
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    value: selectedMonth,
-                    items: months
-                        .map((m) => DropdownMenuItem(value: m, child: Text(m)))
-                        .toList(),
-                    onChanged: (value) {
-                      setState(() => selectedMonth = value!);
-                    },
-                    decoration: const InputDecoration(labelText: 'Mês'),
-                  ),
+                      value: selectedMonth,
+                      items: months
+                          .map(
+                              (m) => DropdownMenuItem(value: m, child: Text(m)))
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() => selectedMonth = value!);
+                      },
+                      isExpanded: true,
+                      icon:
+                          const Icon(Icons.arrow_drop_down, color: Colors.blue),
+                      style: const TextStyle(color: Colors.black, fontSize: 16),
+                      decoration: InputDecoration(
+                        labelText: 'Mês',
+                        prefixIcon: const Icon(Icons.calendar_today),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                      )),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    value: selectedYear,
-                    items: years
-                        .map((y) => DropdownMenuItem(value: y, child: Text(y)))
-                        .toList(),
-                    onChanged: (value) {
-                      setState(() => selectedYear = value!);
-                    },
-                    decoration: const InputDecoration(labelText: 'Ano'),
-                  ),
+                      value: selectedYear,
+                      items: years
+                          .map(
+                              (y) => DropdownMenuItem(value: y, child: Text(y)))
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() => selectedYear = value!);
+                      },
+                      isExpanded: true,
+                      icon:
+                          const Icon(Icons.arrow_drop_down, color: Colors.blue),
+                      style: const TextStyle(color: Colors.black, fontSize: 16),
+                      decoration: InputDecoration(
+                        labelText: 'Ano',
+                        prefixIcon: const Icon(Icons.calendar_today),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                      )),
                 ),
               ],
             ),
