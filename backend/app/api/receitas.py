@@ -66,3 +66,32 @@ def total_receitas(
         "ano": ano,
         "total": total
     }
+
+@router.get("/detalhes-receitas")
+def receitas_detalhadas(id_login: str, mes: int, ano: int, db: Session = Depends(get_db)):
+    data_consulta = date(ano, mes, 1)
+    receitas = db.query(Receitas).filter(Receitas.id_login == id_login).all()
+
+    resultado = []
+    for r in receitas:
+        data_base = r.data_recebimento.replace(day=1)
+        fim = r.fim_recorrencia.replace(day=1) if r.fim_recorrencia else None
+
+        if not r.recorrencia and data_base == data_consulta:
+            resultado.append({
+                "descricao": r.descricao,
+                "valor": r.valor,
+                "data_recebimento": r.data_recebimento,
+                "recorrencia": r.recorrencia,
+                "fim_recorrencia": None
+            })
+        elif r.recorrencia and (data_consulta >= data_base and (fim is None or data_consulta <= fim)):
+            resultado.append({
+                "descricao": r.descricao,
+                "valor": r.valor,
+                "data_recebimento": r.data_recebimento,
+                "recorrencia": r.recorrencia,
+                "fim_recorrencia": r.fim_recorrencia
+            })
+
+    return resultado

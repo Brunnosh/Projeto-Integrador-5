@@ -66,3 +66,32 @@ def total_despesas(
         "ano": ano,
         "total": total
     }
+
+@router.get("/detalhes-despesas")
+def despesas_detalhadas(id_login: str, mes: int, ano: int, db: Session = Depends(get_db)):
+    data_consulta = date(ano, mes, 1)
+    despesas = db.query(Despesas).filter(Despesas.id_login == id_login).all()
+
+    resultado = []
+    for r in despesas:
+        data_base = r.data_vencimento.replace(day=1)
+        fim = r.fim_recorrencia.replace(day=1) if r.fim_recorrencia else None
+
+        if not r.recorrencia and data_base == data_consulta:
+            resultado.append({
+                "descricao": r.descricao,
+                "valor": r.valor,
+                "data_vencimento": r.data_vencimento,
+                "recorrencia": r.recorrencia,
+                "fim_recorrencia": None
+            })
+        elif r.recorrencia and (data_consulta >= data_base and (fim is None or data_consulta <= fim)):
+            resultado.append({
+                "descricao": r.descricao,
+                "valor": r.valor,
+                "data_vencimento": r.data_vencimento,
+                "recorrencia": r.recorrencia,
+                "fim_recorrencia": r.fim_recorrencia
+            })
+
+    return resultado

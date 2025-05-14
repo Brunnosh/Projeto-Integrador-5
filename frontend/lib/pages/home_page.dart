@@ -182,20 +182,40 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildCard(String title, double value, Color color, IconData icon) {
+  Widget _buildCard(
+    String title,
+    double value,
+    Color color,
+    IconData icon, {
+    VoidCallback? onViewPressed,
+  }) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
         leading: Icon(icon, color: color),
         title: Text(title),
-        trailing: Text(
-          'R\$ ${value.toStringAsFixed(2)}',
-          style: TextStyle(
-            color: color,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'R\$ ${value.toStringAsFixed(2)}',
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            if (onViewPressed != null) ...[
+              const SizedBox(width: 8),
+              IconButton(
+                icon: const Icon(Icons.visibility),
+                color: Colors.blue[600],
+                tooltip: 'Ver detalhes',
+                onPressed: onViewPressed,
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -284,8 +304,47 @@ class _HomePageState extends State<HomePage> {
             _buildCard('Saldo Atual', saldo, Colors.blue,
                 Icons.account_balance_wallet),
             _buildCard(
-                'Receitas', receitas, Colors.green, Icons.arrow_downward),
-            _buildCard('Despesas', despesas, Colors.red, Icons.arrow_upward),
+              'Receitas',
+              receitas,
+              Colors.green,
+              Icons.arrow_downward,
+              onViewPressed: () async {
+                final prefs = await SharedPreferences.getInstance();
+                final userId = prefs.getString('userId');
+                final mes = monthToNumber[selectedMonth];
+
+                Navigator.pushNamed(
+                  context,
+                  '/receitas-detalhadas',
+                  arguments: {
+                    'id_login': userId,
+                    'mes': mes,
+                    'ano': selectedYear,
+                  },
+                );
+              },
+            ),
+            _buildCard(
+              'Despesas',
+              despesas,
+              Colors.red,
+              Icons.arrow_upward,
+              onViewPressed: () async {
+                final prefs = await SharedPreferences.getInstance();
+                final userId = prefs.getString('userId');
+                final mes = monthToNumber[selectedMonth];
+
+                Navigator.pushNamed(
+                  context,
+                  '/despesas-detalhadas',
+                  arguments: {
+                    'id_login': userId,
+                    'mes': mes,
+                    'ano': selectedYear,
+                  },
+                );
+              },
+            ),
             const SizedBox(height: 20),
             ElevatedButton.icon(
               icon: const Icon(Icons.pie_chart),

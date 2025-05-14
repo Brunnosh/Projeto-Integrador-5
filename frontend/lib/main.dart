@@ -4,6 +4,8 @@ import 'pages/register_page.dart';
 import 'pages/home_page.dart';
 import 'pages/inserir_despesas.dart';
 import 'pages/inserir_receitas.dart';
+import 'pages/receitas_detalhadas.dart';
+import 'pages/despesas_detalhadas.dart';
 
 void main() {
   runApp(const MyFinanceApp());
@@ -28,6 +30,8 @@ class MyFinanceApp extends StatelessWidget {
         '/home': (context) => const HomePage(),
         '/inserir-despesas': (context) => const InserirDespesaPage(),
         '/inserir-receitas': (context) => const InserirReceitaPage(),
+        '/receitas-detalhadas': (context) => const ReceitasDetalhadasPage(),
+        '/despesas-detalhadas': (context) => const DespesasDetalhadasPage(),
       },
     );
   }
