@@ -133,6 +133,7 @@ class _ReceitasDetalhadasPageState extends State<ReceitasDetalhadasPage> {
     final valor = receita['valor'] ?? 0.0;
     final recorrente = receita['recorrencia'] ?? true;
     final fimRecorrencia = receita['fim_recorrencia'] ?? '-';
+    final idReceita = receita['id'];
 
     final original = receita['data_recebimento'] ?? '';
     String dataRecebimento;
@@ -168,13 +169,36 @@ class _ReceitasDetalhadasPageState extends State<ReceitasDetalhadasPage> {
             if (recorrente) Text('Fim da recorrência: $fimRecorrencia'),
           ],
         ),
-        trailing: Text(
-          'R\$ ${valor.toStringAsFixed(2)}',
-          style: const TextStyle(
-            color: Colors.green,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'R\$ ${valor.toStringAsFixed(2)}',
+              style: const TextStyle(
+                color: Colors.green,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.edit, color: Colors.blue),
+              tooltip: 'Editar Despesa',
+              onPressed: () {
+                Navigator.pushNamed(
+                  context,
+                  '/editar-despesa',
+                  arguments: {'id': idReceita},
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete, color: Colors.red),
+              tooltip: 'Excluir Despesa',
+              onPressed: () {
+                print("id: $idReceita");
+              },
+            ),
+          ],
         ),
       ),
     );

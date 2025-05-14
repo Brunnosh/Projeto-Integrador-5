@@ -79,6 +79,7 @@ def receitas_detalhadas(id_login: str, mes: int, ano: int, db: Session = Depends
 
         if not r.recorrencia and data_base == data_consulta:
             resultado.append({
+                "id": r.id,
                 "descricao": r.descricao,
                 "valor": r.valor,
                 "data_recebimento": r.data_recebimento,
@@ -87,6 +88,7 @@ def receitas_detalhadas(id_login: str, mes: int, ano: int, db: Session = Depends
             })
         elif r.recorrencia and (data_consulta >= data_base and (fim is None or data_consulta <= fim)):
             resultado.append({
+                "id": r.id,
                 "descricao": r.descricao,
                 "valor": r.valor,
                 "data_recebimento": r.data_recebimento,

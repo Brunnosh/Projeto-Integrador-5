@@ -238,7 +238,7 @@ class _DespesasDetalhadasPageState extends State<DespesasDetalhadasPage> {
               },
             ),
             IconButton(
-              icon: const Icon(Icons.delete, color: Colors.grey),
+              icon: const Icon(Icons.delete, color: Colors.red),
               tooltip: 'Excluir Despesa',
               onPressed: () {
                 _deletarDespesa(idDespesa);
