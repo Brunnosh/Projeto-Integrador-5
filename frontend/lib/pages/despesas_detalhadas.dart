@@ -131,7 +131,7 @@ class _DespesasDetalhadasPageState extends State<DespesasDetalhadasPage> {
   Widget _buildReceitaTile(Map<String, dynamic> receita) {
     final descricao = receita['descricao'] ?? '';
     final valor = receita['valor'] ?? 0.0;
-    final recorrente = receita['recorrente'] ?? true;
+    final recorrente = receita['recorrencia'] ?? true;
     final fimRecorrencia = receita['fim_recorrencia'] ?? '-';
 
     final original = receita['data_vencimento'] ?? '';
