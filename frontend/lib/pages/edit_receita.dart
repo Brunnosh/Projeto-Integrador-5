@@ -22,10 +22,19 @@ class _EditReceitaPageState extends State<EditReceitaPage> {
   DateTime? _fimRecorrencia;
   bool _recorrente = false;
 
+  int? _receitaId;
+
   @override
   void initState() {
     super.initState();
-    _setupApiUrl();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final args =
+          ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      if (args != null) {
+        _receitaId = args['id'];
+      }
+      _setupApiUrl();
+    });
   }
 
   Future<void> _setupApiUrl() async {
@@ -33,30 +42,64 @@ class _EditReceitaPageState extends State<EditReceitaPage> {
     final baseUrl =
         isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
     setState(() {
-      _receitasUrl = '$baseUrl/inserir-receita';
+      _receitasUrl = '$baseUrl/update-receita';
     });
+
+    await _carregarReceita();
   }
 
-  Future<void> inserirReceita() async {
-    if (!_formKey.currentState!.validate() || _selectedDate == null) {
+  Future<void> _carregarReceita() async {
+    if (_receitaId == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+    final idLogin = prefs.getString('userId');
+    final isEmulator = await isRunningOnEmulator();
+    final baseUrl =
+        isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
+    final url = '$baseUrl/unica-receita/$_receitaId?id_login=$idLogin';
+
+    try {
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(utf8.decode(response.bodyBytes));
+        setState(() {
+          _descricaoController.text = data['descricao'] ?? '';
+          _valorController.text = data['valor']?.toString() ?? '';
+          _selectedDate = DateTime.parse(data['data_recebimento']);
+          _recorrente = data['recorrencia'] ?? false;
+          if (data['fim_recorrencia'] != null) {
+            _fimRecorrencia = DateTime.tryParse(data['fim_recorrencia']);
+          }
+        });
+      } else {
+        _showSnackbar('Erro ao carregar receita');
+      }
+    } catch (e) {
+      _showSnackbar('Erro ao carregar: $e');
+    }
+  }
+
+  Future<void> atualizarReceita() async {
+    if (!_formKey.currentState!.validate() ||
+        _selectedDate == null ||
+        _receitaId == null) {
       _showSnackbar("Preencha todos os campos corretamente.");
       return;
     }
 
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access_token');
+    final idLogin = prefs.getString('userId');
 
-    if (token == null) {
+    if (token == null || idLogin == null) {
       _showSnackbar('Usuário não autenticado.');
       return;
     }
 
-    final idLogin = prefs.getString('userId');
-
-    if (idLogin == null) {
-      _showSnackbar('ID do usuário não encontrado.');
-      return;
-    }
+    final url = '$_receitasUrl/$_receitaId?id_login=$idLogin';
 
     final requestBody = {
       'id_login': idLogin,
@@ -68,24 +111,22 @@ class _EditReceitaPageState extends State<EditReceitaPage> {
     };
 
     try {
-      final response = await http.post(
-        Uri.parse(_receitasUrl),
+      final response = await http.put(
+        Uri.parse(url),
         headers: {'Content-Type': 'application/json; charset=UTF-8'},
         body: json.encode(requestBody),
       );
 
       if (response.statusCode == 200) {
-        final responseData = json.decode(response.body);
-        _showSnackbar(responseData['mensagem']);
-
-        Future.delayed(const Duration(seconds: 2), () {
-          if (mounted) Navigator.pop(context);
+        _showSnackbar('Receita atualizada com sucesso.');
+        Future.delayed(const Duration(seconds: 1), () {
+          if (mounted) Navigator.pop(context, true);
         });
       } else {
-        _showSnackbar('Erro ao inserir: ${response.body}');
+        _showSnackbar('Erro ao atualizar: ${response.body}');
       }
     } catch (e) {
-      _showSnackbar('Erro ao inserir: $e');
+      _showSnackbar('Erro ao atualizar: $e');
     }
   }
 
@@ -95,7 +136,7 @@ class _EditReceitaPageState extends State<EditReceitaPage> {
   }
 
   void _onStepContinue() {
-    inserirReceita();
+    atualizarReceita();
   }
 
   void _onStepCancel() {
@@ -107,7 +148,7 @@ class _EditReceitaPageState extends State<EditReceitaPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Inserir Receita')),
+      appBar: AppBar(title: const Text('Editar Receita')),
       body: Form(
         key: _formKey,
         child: Stepper(

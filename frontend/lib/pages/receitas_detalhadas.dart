@@ -228,8 +228,8 @@ class _ReceitasDetalhadasPageState extends State<ReceitasDetalhadasPage> {
             IconButton(
               icon: const Icon(Icons.edit, color: Colors.blue),
               tooltip: 'Editar receita',
-              onPressed: () {
-                Navigator.pushNamed(
+              onPressed: () async {
+                await Navigator.pushNamed(
                   context,
                   '/edit-receita',
                   arguments: {'id': idReceita},
