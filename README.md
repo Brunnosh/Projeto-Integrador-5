@@ -15,34 +15,24 @@
 ## 🚀 Como rodar o projeto
 
 ### ✅ Pré-requisitos
-- Docker Desktop instalado e em execução
+Antes de rodar o projeto, certifique-se de ter instalado:
+- Docker Desktop
+- Docker Compose
+- Flutter SDK (caso queira buildar o APK localmente)
+- ADB (Android Debug Bridge) (para instalar o APK em dispositivos)
 
 ### 🧭 Passo a passo
-1. Abra o Docker Desktop
-2. Clone o repositório ou baixe o projeto
-
-### ▶️ Rodar aplicação
-- **docker-compose up --build**
-- **cd frontend**
-- **flutter pub get**
-- **flutter run**
-
-### 🛑 Parar a aplicação
-**docker-compose down**
-
-### 🌐 Acessando a aplicação
-- API simples: http://localhost:8000/hello
-- Documentação da API (Swagger UI): http://localhost:8000/docs
-- Documentação da API (Redoc): http://localhost:8000/redoc
-
----
-
-### 📂 Estrutura do projeto
-MyWallet/
-│
-├── backend/
-│   ├── main.py
-│   ├── requirements.txt
-│   └── Dockerfile
-│
-└── docker-compose.yml
+#### Subindo o Projeto com Docker
+Após clonar o repositório
+- Suba os containers do backend e do banco de dados - make up
+#### Gerando o APK
+- Compila o APK otimizado para produção - make build-release
+- Compila o APK com depuração ativada - make build-release
+#### Instalando o APK em um dispositivo ou emulador
+- Modo release - make install-release
+- Modo Debug - make install-debug
+- Build + Instalação em um único comando - make full-release
+#### Modo Desenvolvimento (Hot Reload)
+- Inicia o app diretamente no emulador com suporte a hot reload - make debug-run
+#### Limpando arquivos de build
+- Remover todos os artefatos de build Flutter - make clean
