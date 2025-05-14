@@ -6,6 +6,7 @@ import 'pages/inserir_despesas.dart';
 import 'pages/inserir_receitas.dart';
 import 'pages/receitas_detalhadas.dart';
 import 'pages/despesas_detalhadas.dart';
+import 'pages/dashboard.dart';
 
 void main() {
   runApp(const MyFinanceApp());
@@ -32,6 +33,7 @@ class MyFinanceApp extends StatelessWidget {
         '/inserir-receitas': (context) => const InserirReceitaPage(),
         '/receitas-detalhadas': (context) => const ReceitasDetalhadasPage(),
         '/despesas-detalhadas': (context) => const DespesasDetalhadasPage(),
+        '/dashboard': (context) => DashboardPage(),
       },
     );
   }
