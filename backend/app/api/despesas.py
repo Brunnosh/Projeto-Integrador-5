@@ -79,6 +79,7 @@ def despesas_detalhadas(id_login: str, mes: int, ano: int, db: Session = Depends
 
         if not r.recorrencia and data_base == data_consulta:
             resultado.append({
+                "id": r.id,
                 "descricao": r.descricao,
                 "valor": r.valor,
                 "data_vencimento": r.data_vencimento,
@@ -87,6 +88,7 @@ def despesas_detalhadas(id_login: str, mes: int, ano: int, db: Session = Depends
             })
         elif r.recorrencia and (data_consulta >= data_base and (fim is None or data_consulta <= fim)):
             resultado.append({
+                "id": r.id,
                 "descricao": r.descricao,
                 "valor": r.valor,
                 "data_vencimento": r.data_vencimento,
@@ -95,3 +97,18 @@ def despesas_detalhadas(id_login: str, mes: int, ano: int, db: Session = Depends
             })
 
     return resultado
+
+@router.delete("/despesa/{id}")
+def deletar_despesa(id: int, id_login: str, db: Session = Depends(get_db)):
+    despesa = db.query(Despesas).filter(Despesas.id == id).first()
+
+    if not despesa:
+        raise HTTPException(status_code=404, detail="Despesa não encontrada")
+
+    if str(despesa.id_login).strip() != str(id_login).strip():
+        raise HTTPException(status_code=403, detail="Você não tem permissão para excluir esta despesa.")
+
+    db.delete(despesa)
+    db.commit()
+
+    return {"mensagem": "Despesa excluída com sucesso", "id_despesa": id}
