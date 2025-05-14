@@ -231,9 +231,10 @@ class _ReceitasDetalhadasPageState extends State<ReceitasDetalhadasPage> {
               onPressed: () {
                 Navigator.pushNamed(
                   context,
-                  '/editar-receita',
+                  '/edit-receita',
                   arguments: {'id': idReceita},
                 );
+                _loadReceitas();
               },
             ),
             IconButton(

@@ -115,7 +115,7 @@ class _DespesasDetalhadasPageState extends State<DespesasDetalhadasPage> {
     final isEmulator = await isRunningOnEmulator();
     final baseUrl =
         isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
-    final url = '$baseUrl/despesa/$idDespesa?id_login=$userId';
+    final url = '$baseUrl/delete-despesa/$idDespesa?id_login=$userId';
 
     try {
       final response = await http.delete(
@@ -229,12 +229,13 @@ class _DespesasDetalhadasPageState extends State<DespesasDetalhadasPage> {
             IconButton(
               icon: const Icon(Icons.edit, color: Colors.blue),
               tooltip: 'Editar Despesa',
-              onPressed: () {
-                Navigator.pushNamed(
+              onPressed: () async {
+                await Navigator.pushNamed(
                   context,
-                  '/editar-despesa',
+                  '/edit-despesa',
                   arguments: {'id': idDespesa},
                 );
+                _loadDespesas();
               },
             ),
             IconButton(

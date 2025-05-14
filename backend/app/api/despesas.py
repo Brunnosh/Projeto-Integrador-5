@@ -98,7 +98,7 @@ def despesas_detalhadas(id_login: str, mes: int, ano: int, db: Session = Depends
 
     return resultado
 
-@router.delete("/despesa/{id}")
+@router.delete("/delete-despesa/{id}")
 def deletar_despesa(id: int, id_login: str, db: Session = Depends(get_db)):
     despesa = db.query(Despesas).filter(Despesas.id == id).first()
 
@@ -112,3 +112,55 @@ def deletar_despesa(id: int, id_login: str, db: Session = Depends(get_db)):
     db.commit()
 
     return {"mensagem": "Despesa excluída com sucesso", "id_despesa": id}
+
+
+@router.put("/update-despesa/{id}")
+def atualizar_despesa(
+    id: int,
+    id_login: str,
+    dados: DespesasCreate,
+    db: Session = Depends(get_db)
+):
+    despesa = db.query(Despesas).filter(Despesas.id == id).first()
+
+    if not despesa:
+        raise HTTPException(status_code=404, detail="Despesa não encontrada")
+
+    if str(despesa.id_login).strip() != str(id_login).strip():
+        raise HTTPException(status_code=403, detail="Você não tem permissão para editar esta despesa.")
+
+    despesa.descricao = dados.descricao
+    despesa.valor = dados.valor
+    despesa.data_vencimento = dados.data_vencimento
+    despesa.recorrencia = dados.recorrencia
+    despesa.fim_recorrencia = dados.fim_recorrencia
+    despesa.id_categoria = dados.id_categoria
+
+    db.commit()
+    db.refresh(despesa)
+
+    return {"mensagem": "Despesa atualizada com sucesso", "id_despesa": despesa.id}
+
+@router.get("/unica-despesa/{id}")
+def obter_despesa(
+    id: int ,
+    id_login: str ,
+    db: Session = Depends(get_db)
+):
+    despesa = db.query(Despesas).filter(Despesas.id == id).first()
+
+    if not despesa:
+        raise HTTPException(status_code=404, detail="Despesa não encontrada")
+
+    if str(despesa.id_login).strip() != str(id_login).strip():
+        raise HTTPException(status_code=403, detail="Acesso não autorizado à despesa")
+
+    return {
+        "id": despesa.id,
+        "descricao": despesa.descricao,
+        "valor": despesa.valor,
+        "data_vencimento": despesa.data_vencimento,
+        "recorrencia": despesa.recorrencia,
+        "fim_recorrencia": despesa.fim_recorrencia,
+        "id_categoria": despesa.id_categoria,
+    }

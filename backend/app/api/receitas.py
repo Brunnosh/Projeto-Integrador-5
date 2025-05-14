@@ -98,7 +98,7 @@ def receitas_detalhadas(id_login: str, mes: int, ano: int, db: Session = Depends
 
     return resultado
 
-@router.delete("/receita/{id}")
+@router.delete("/delete-receita/{id}")
 def deletar_receita(id: int, id_login: str, db: Session = Depends(get_db)):
     receita = db.query(Receitas).filter(Receitas.id == id).first()
 
@@ -112,3 +112,5 @@ def deletar_receita(id: int, id_login: str, db: Session = Depends(get_db)):
     db.commit()
 
     return {"mensagem": "receita excluída com sucesso", "id_receita": id}
+
+    
