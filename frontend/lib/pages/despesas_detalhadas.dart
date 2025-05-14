@@ -128,7 +128,7 @@ class _DespesasDetalhadasPageState extends State<DespesasDetalhadasPage> {
           const SnackBar(content: Text('Despesa excluída com sucesso')),
         );
         _loadDespesas(); // recarrega a lista
-        Future.delayed(const Duration(seconds: 2), () {
+        Future.delayed(const Duration(seconds: 1), () {
           if (mounted) Navigator.pop(context);
         });
       } else {

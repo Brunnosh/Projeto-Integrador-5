@@ -97,3 +97,18 @@ def receitas_detalhadas(id_login: str, mes: int, ano: int, db: Session = Depends
             })
 
     return resultado
+
+@router.delete("/receita/{id}")
+def deletar_receita(id: int, id_login: str, db: Session = Depends(get_db)):
+    receita = db.query(Receitas).filter(Receitas.id == id).first()
+
+    if not receita:
+        raise HTTPException(status_code=404, detail="receita não encontrada")
+
+    if str(receita.id_login).strip() != str(id_login).strip():
+        raise HTTPException(status_code=403, detail="Você não tem permissão para excluir esta receita.")
+
+    db.delete(receita)
+    db.commit()
+
+    return {"mensagem": "receita excluída com sucesso", "id_receita": id}

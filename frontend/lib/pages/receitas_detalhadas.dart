@@ -128,6 +128,51 @@ class _ReceitasDetalhadasPageState extends State<ReceitasDetalhadasPage> {
     );
   }
 
+  Future<void> _deletarReceita(int idreceita) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+    final userId = prefs.getString('userId');
+
+    print('Deletando receita $idreceita com id_login: $userId');
+
+    if (token == null || userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Usuário não autenticado')),
+      );
+      return;
+    }
+
+    final isEmulator = await isRunningOnEmulator();
+    final baseUrl =
+        isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
+    final url = '$baseUrl/receita/$idreceita?id_login=$userId';
+
+    try {
+      final response = await http.delete(
+        Uri.parse(url),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Receita excluída com sucesso')),
+        );
+        _loadReceitas(); // recarrega a lista
+        Future.delayed(const Duration(seconds: 1), () {
+          if (mounted) Navigator.pop(context);
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Erro ao excluir receita')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erro de conexão ao excluir receita')),
+      );
+    }
+  }
+
   Widget _buildReceitaTile(Map<String, dynamic> receita) {
     final descricao = receita['descricao'] ?? '';
     final valor = receita['valor'] ?? 0.0;
@@ -182,20 +227,20 @@ class _ReceitasDetalhadasPageState extends State<ReceitasDetalhadasPage> {
             ),
             IconButton(
               icon: const Icon(Icons.edit, color: Colors.blue),
-              tooltip: 'Editar Despesa',
+              tooltip: 'Editar receita',
               onPressed: () {
                 Navigator.pushNamed(
                   context,
-                  '/editar-despesa',
+                  '/editar-receita',
                   arguments: {'id': idReceita},
                 );
               },
             ),
             IconButton(
               icon: const Icon(Icons.delete, color: Colors.red),
-              tooltip: 'Excluir Despesa',
+              tooltip: 'Excluir receita',
               onPressed: () {
-                print("id: $idReceita");
+                _deletarReceita(idReceita);
               },
             ),
           ],
