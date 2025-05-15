@@ -52,3 +52,29 @@ def cadastrar_usuario(dados: UsuarioCreate, db: Session = Depends(get_db)):
     access_token = token.gerar_token_acesso(dados.email)
 
     return {"access_token": access_token, "token_type": "bearer"}
+
+@router.get("/get-usuario")
+def obter_dados_usuario(id_login: int , db: Session = Depends(get_db)):
+    usuario = db.query(usuario_model.DadosUsuarios).filter_by(id_login=id_login).first()
+
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado.")
+
+    login = db.query(login_model.Login).filter_by(id=usuario.id_login).first()
+    endereco = db.query(endereco_model.Endereco).filter_by(id=usuario.id_endereco).first()
+
+    return {
+        "id_login": usuario.id_login,
+        "nome": usuario.nome,
+        "sobrenome": usuario.sobrenome,
+        "data_nascimento": usuario.data_nascimento,
+        "email": login.email if login else None,
+        "endereco": {
+            "rua": endereco.rua if endereco else None,
+            "numero": endereco.numero if endereco else None,
+            "bairro": endereco.bairro if endereco else None,
+            "complemento": endereco.complemento if endereco else None,
+            "cep": endereco.cep if endereco else None,
+            "id_estado": endereco.id_estado if endereco else None,
+        }
+    }
