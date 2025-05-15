@@ -98,6 +98,51 @@ class _DespesasDetalhadasPageState extends State<DespesasDetalhadasPage> {
     }
   }
 
+  Future<void> _deletarDespesa(int idDespesa) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+    final userId = prefs.getString('userId');
+
+    print('Deletando despesa $idDespesa com id_login: $userId');
+
+    if (token == null || userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Usuário não autenticado')),
+      );
+      return;
+    }
+
+    final isEmulator = await isRunningOnEmulator();
+    final baseUrl =
+        isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
+    final url = '$baseUrl/delete-despesa/$idDespesa?id_login=$userId';
+
+    try {
+      final response = await http.delete(
+        Uri.parse(url),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Despesa excluída com sucesso')),
+        );
+        _loadDespesas(); // recarrega a lista
+        Future.delayed(const Duration(seconds: 1), () {
+          if (mounted) Navigator.pop(context);
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Erro ao excluir despesa')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erro de conexão ao excluir despesa')),
+      );
+    }
+  }
+
   Widget _buildDropdown<T>({
     required String label,
     required String value,
@@ -128,14 +173,16 @@ class _DespesasDetalhadasPageState extends State<DespesasDetalhadasPage> {
     );
   }
 
-  Widget _buildReceitaTile(Map<String, dynamic> receita) {
-    final descricao = receita['descricao'] ?? '';
-    final valor = receita['valor'] ?? 0.0;
-    final recorrente = receita['recorrencia'] ?? true;
-    final fimRecorrencia = receita['fim_recorrencia'] ?? '-';
+  Widget _buildReceitaTile(Map<String, dynamic> despesa) {
+    final descricao = despesa['descricao'] ?? '';
+    final valor = despesa['valor'] ?? 0.0;
+    final recorrente = despesa['recorrente'] ?? false;
+    final fimRecorrencia = despesa['fim_recorrencia'] ?? '-';
+    final idDespesa = despesa['id'];
 
-    final original = receita['data_vencimento'] ?? '';
+    final original = despesa['data_vencimento'] ?? '';
     String dataVencimento;
+
     try {
       final parsedDate = DateTime.parse(original);
       final dia = parsedDate.day;
@@ -158,7 +205,7 @@ class _DespesasDetalhadasPageState extends State<DespesasDetalhadasPage> {
       elevation: 1,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: ListTile(
-        leading: Icon(Icons.attach_money, color: Colors.red),
+        leading: const Icon(Icons.attach_money, color: Colors.red),
         title: Text(descricao),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -168,13 +215,37 @@ class _DespesasDetalhadasPageState extends State<DespesasDetalhadasPage> {
             if (recorrente) Text('Fim da recorrência: $fimRecorrencia'),
           ],
         ),
-        trailing: Text(
-          'R\$ ${valor.toStringAsFixed(2)}',
-          style: const TextStyle(
-            color: Colors.red,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'R\$ ${valor.toStringAsFixed(2)}',
+              style: const TextStyle(
+                color: Colors.red,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.edit, color: Colors.blue),
+              tooltip: 'Editar Despesa',
+              onPressed: () async {
+                await Navigator.pushNamed(
+                  context,
+                  '/edit-despesa',
+                  arguments: {'id': idDespesa},
+                );
+                _loadDespesas();
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete, color: Colors.red),
+              tooltip: 'Excluir Despesa',
+              onPressed: () {
+                _deletarDespesa(idDespesa);
+              },
+            ),
+          ],
         ),
       ),
     );

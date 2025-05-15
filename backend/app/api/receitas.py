@@ -79,6 +79,7 @@ def receitas_detalhadas(id_login: str, mes: int, ano: int, db: Session = Depends
 
         if not r.recorrencia and data_base == data_consulta:
             resultado.append({
+                "id": r.id,
                 "descricao": r.descricao,
                 "valor": r.valor,
                 "data_recebimento": r.data_recebimento,
@@ -87,6 +88,7 @@ def receitas_detalhadas(id_login: str, mes: int, ano: int, db: Session = Depends
             })
         elif r.recorrencia and (data_consulta >= data_base and (fim is None or data_consulta <= fim)):
             resultado.append({
+                "id": r.id,
                 "descricao": r.descricao,
                 "valor": r.valor,
                 "data_recebimento": r.data_recebimento,
@@ -95,3 +97,68 @@ def receitas_detalhadas(id_login: str, mes: int, ano: int, db: Session = Depends
             })
 
     return resultado
+
+@router.delete("/delete-receita/{id}")
+def deletar_receita(id: int, id_login: str, db: Session = Depends(get_db)):
+    receita = db.query(Receitas).filter(Receitas.id == id).first()
+
+    if not receita:
+        raise HTTPException(status_code=404, detail="receita não encontrada")
+
+    if str(receita.id_login).strip() != str(id_login).strip():
+        raise HTTPException(status_code=403, detail="Você não tem permissão para excluir esta receita.")
+
+    db.delete(receita)
+    db.commit()
+
+    return {"mensagem": "receita excluída com sucesso", "id_receita": id}
+
+@router.put("/update-receita/{id}")
+def atualizar_receita(
+    id: int,
+    id_login: str,
+    dados: ReceitaCreate,
+    db: Session = Depends(get_db)
+):
+    receita = db.query(Receitas).filter(Receitas.id == id).first()
+
+    if not receita:
+        raise HTTPException(status_code=404, detail="receita não encontrada")
+
+    if str(receita.id_login).strip() != str(id_login).strip():
+        raise HTTPException(status_code=403, detail="Você não tem permissão para editar esta receita.")
+
+    receita.descricao = dados.descricao
+    receita.valor = dados.valor
+    receita.data_recebimento = dados.data_recebimento
+    receita.recorrencia = dados.recorrencia
+    receita.fim_recorrencia = dados.fim_recorrencia
+
+
+    db.commit()
+    db.refresh(receita)
+
+    return {"mensagem": "receita atualizada com sucesso", "id_receita": receita.id}
+
+@router.get("/unica-receita/{id}")
+def obter_receita(
+    id: int ,
+    id_login: str ,
+    db: Session = Depends(get_db)
+):
+    receita = db.query(Receitas).filter(Receitas.id == id).first()
+
+    if not receita:
+        raise HTTPException(status_code=404, detail="receita não encontrada")
+
+    if str(receita.id_login).strip() != str(id_login).strip():
+        raise HTTPException(status_code=403, detail="Acesso não autorizado à receita")
+
+    return {
+        "id": receita.id,
+        "descricao": receita.descricao,
+        "valor": receita.valor,
+        "data_recebimento": receita.data_recebimento,
+        "recorrencia": receita.recorrencia,
+        "fim_recorrencia": receita.fim_recorrencia
+    }
