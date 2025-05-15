@@ -1,24 +1,28 @@
-import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:device_info_plus/device_info_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:fl_chart/fl_chart.dart';
 
-class DashboardPage extends StatefulWidget {
-  const DashboardPage({super.key});
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+class DashboardScreen extends StatefulWidget {
+  final int idLogin;
+  const DashboardScreen({Key? key, required this.idLogin}) : super(key: key);
 
   @override
-  State<DashboardPage> createState() => _DashboardPageState();
+  State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardPageState extends State<DashboardPage> {
+class _DashboardScreenState extends State<DashboardScreen> {
   late String selectedMonth, selectedYear;
   late List<String> years;
-  late int? userId;
-  List<Map<String, dynamic>> despesasPorDia = [];
-  String apiUrl = '';
+
+  List<BarChartGroupData> barGroups = [];
+  List<PieChartSectionData> pieSections = [];
+
+  String _diaVencimentoUrl = '';
+  String _despesasCategoriaUrl = '';
 
   final Map<String, int> monthToNumber = {
     'Janeiro': 1,
@@ -38,227 +42,243 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
-    selectedMonth =
-        monthToNumber.entries.firstWhere((e) => e.value == now.month).key;
-    selectedYear = now.year.toString();
-    years = List.generate(11, (i) => (now.year - 5 + i).toString());
+    final currentYear = DateTime.now().year;
+    final currentMonth = DateTime.now().month;
+    years = List.generate(11, (index) => (currentYear - 5 + index).toString());
+    selectedYear = currentYear.toString();
+    selectedMonth = monthToNumber.entries
+        .firstWhere((entry) => entry.value == currentMonth)
+        .key;
     _setupApi();
   }
 
-  Future<void> _setupApi() async {
-    final isEmulator = await _isRunningOnEmulator();
-    final prefs = await SharedPreferences.getInstance();
-    userId = int.tryParse(prefs.getString('userId') ?? '');
-    if (userId == null) return;
-    apiUrl = isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
-    _loadDespesasPorDia();
+  void _setupApi() async {
+    final isEmulator = await isRunningOnEmulator();
+    final baseUrl =
+        isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
+    setState(() {
+      _diaVencimentoUrl = '$baseUrl/contagem-despesas-por-dia-vencimento';
+      _despesasCategoriaUrl = '$baseUrl/contagem-despesas-por-categoria';
+    });
+    _loadDespesasPorDiaVencimento();
+    _loadDespesasPorCategoria();
   }
 
-  Future<bool> _isRunningOnEmulator() async {
+  Future<bool> isRunningOnEmulator() async {
     final deviceInfo = DeviceInfoPlugin();
     if (Platform.isAndroid) {
-      final info = await deviceInfo.androidInfo;
-      return !info.isPhysicalDevice;
+      final androidInfo = await deviceInfo.androidInfo;
+      return !androidInfo.isPhysicalDevice;
     } else if (Platform.isIOS) {
-      final info = await deviceInfo.iosInfo;
-      return !info.isPhysicalDevice;
+      final iosInfo = await deviceInfo.iosInfo;
+      return !iosInfo.isPhysicalDevice;
     }
     return false;
   }
 
-  Future<void> _loadDespesasPorDia() async {
-    if (userId == null) return;
-
+  Future<void> _loadDespesasPorDiaVencimento() async {
     final mes = monthToNumber[selectedMonth];
-    final url = Uri.parse('$apiUrl/contagem-despesas-por-dia-vencimento'
-        '?id_login=$userId&mes=$mes&ano=$selectedYear');
+    final url = Uri.parse(
+        '$_diaVencimentoUrl?id_login=${widget.idLogin}&mes=$mes&ano=$selectedYear');
 
-    try {
-      final response = await http.get(url);
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        setState(() {
-          despesasPorDia = List<Map<String, dynamic>>.from(data);
-        });
-      }
-    } catch (_) {
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+
       setState(() {
-        despesasPorDia = [];
+        barGroups = data.map((item) {
+          return BarChartGroupData(
+            x: item['dia'],
+            barRods: [
+              BarChartRodData(
+                toY: item['quantidade'].toDouble(),
+                color: Colors.teal,
+                width: 16,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ],
+          );
+        }).toList();
       });
     }
   }
 
-  double _getMaxY() {
-    if (despesasPorDia.isEmpty) return 3;
+  Future<void> _loadDespesasPorCategoria() async {
+    final url = Uri.parse(
+        '$_despesasCategoriaUrl?id_login=${widget.idLogin}&mes=${monthToNumber[selectedMonth]}&ano=$selectedYear');
 
-    final max = despesasPorDia
-        .map((e) => e['quantidade'] as num)
-        .reduce((a, b) => a > b ? a : b);
+    final response = await http.get(url);
 
-    return (max < 3 ? 3 : (max.ceilToDouble() + 1));
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+
+      setState(() {
+        pieSections = data.asMap().entries.map((entry) {
+          final index = entry.key;
+          final item = entry.value;
+          final colors = [
+            Colors.redAccent,
+            Colors.green,
+            Colors.blue,
+            Colors.orange,
+            Colors.purple,
+            Colors.cyan,
+          ];
+
+          return PieChartSectionData(
+            value: item['quantidade'].toDouble(),
+            title: item['categoria'],
+            color: colors[index % colors.length],
+            radius: 60,
+            titleStyle: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          );
+        }).toList();
+      });
+    }
   }
 
-  Widget _buildDropdown<T>({
-    required String label,
-    required String value,
-    required List<T> items,
-    required void Function(T?) onChanged,
-    required String Function(T) itemBuilder,
-  }) {
-    return Expanded(
-      child: DropdownButtonFormField<T>(
-        value: value as T,
-        items: items
-            .map((item) => DropdownMenuItem<T>(
-                  value: item,
-                  child: Text(itemBuilder(item)),
-                ))
-            .toList(),
-        onChanged: onChanged,
-        isExpanded: true,
-        decoration: InputDecoration(
-          labelText: label,
-          prefixIcon: const Icon(Icons.calendar_today),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Dashboard'),
+        centerTitle: true,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Card(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              elevation: 2,
+              margin: const EdgeInsets.only(bottom: 16),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    _buildDropdown<String>(
+                      label: 'Mês',
+                      value: selectedMonth,
+                      items: monthToNumber.keys.toList(),
+                      onChanged: (value) {
+                        setState(() => selectedMonth = value!);
+                        _setupApi();
+                      },
+                      itemBuilder: (item) => item,
+                    ),
+                    const SizedBox(width: 12),
+                    _buildDropdown<String>(
+                      label: 'Ano',
+                      value: selectedYear,
+                      items: years,
+                      onChanged: (value) {
+                        setState(() => selectedYear = value!);
+                        _setupApi();
+                      },
+                      itemBuilder: (item) => item,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const Text(
+              'Despesas por Dia de Vencimento',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            _buildBarChart(),
+            const SizedBox(height: 24),
+            const Text(
+              'Distribuição por Categoria',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            _buildPieChart(),
+          ],
         ),
       ),
     );
   }
 
   Widget _buildBarChart() {
-    if (despesasPorDia.isEmpty) {
-      return const Center(child: Text('Nenhuma despesa encontrada.'));
-    }
-
     return SizedBox(
-      height: 240, // Ajuste a altura do gráfico aqui
-      child: BarChart(
-        BarChartData(
-          maxY: _getMaxY(), // Usa a função auxiliar
-          titlesData: FlTitlesData(
-            show: true,
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                interval: 1,
-                reservedSize: 28,
-                getTitlesWidget: (value, _) {
-                  if (value % 1 == 0) {
-                    return Text(
-                      value.toInt().toString(),
-                      style: const TextStyle(fontSize: 10),
-                    );
-                  }
-                  return const SizedBox.shrink(); // oculta decimais
-                },
-              ),
-              axisNameWidget: const Padding(
-                padding: EdgeInsets.only(right: 8),
-                child: Text('Qtde. de Contas'),
-              ),
-              axisNameSize: 16,
-            ),
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                getTitlesWidget: (value, _) => Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    value.toInt().toString(),
-                    style: const TextStyle(fontSize: 10),
+      height: 240,
+      child: barGroups.isEmpty
+          ? const Center(child: Text('Nenhum dado disponível'))
+          : BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                barGroups: barGroups,
+                titlesData: FlTitlesData(
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, _) => Text('${value.toInt()}'),
+                    ),
                   ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, _) => Text('${value.toInt()}'),
+                    ),
+                  ),
+                  topTitles:
+                      AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles:
+                      AxisTitles(sideTitles: SideTitles(showTitles: false)),
                 ),
+                borderData: FlBorderData(show: false),
+                gridData: FlGridData(show: true),
               ),
-              axisNameWidget: const Text('Dia do Vencimento'),
-              axisNameSize: 16,
+              swapAnimationDuration: const Duration(milliseconds: 500),
+              swapAnimationCurve: Curves.easeInOut,
             ),
-            rightTitles: AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-            topTitles: AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-          ),
-          borderData: FlBorderData(show: false),
-          gridData: FlGridData(show: true),
-          barGroups: despesasPorDia.map((dado) {
-            final dia = dado['dia'] as int;
-            final qtd = (dado['quantidade'] as num).toDouble();
-            return BarChartGroupData(
-              x: dia,
-              barRods: [
-                BarChartRodData(
-                  toY: qtd,
-                  color: Colors.deepPurpleAccent,
-                  width: 14,
-                  borderRadius: BorderRadius.circular(4),
-                )
-              ],
-            );
-          }).toList(),
-        ),
-      ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Dashboards')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Filtros
-            Row(
-              children: [
-                _buildDropdown<String>(
-                  label: 'Mês',
-                  value: selectedMonth,
-                  items: monthToNumber.keys.toList(),
-                  onChanged: (value) {
-                    setState(() => selectedMonth = value!);
-                    _loadDespesasPorDia();
-                  },
-                  itemBuilder: (item) => item,
-                ),
-                const SizedBox(width: 12),
-                _buildDropdown<String>(
-                  label: 'Ano',
-                  value: selectedYear,
-                  items: years,
-                  onChanged: (value) {
-                    setState(() => selectedYear = value!);
-                    _loadDespesasPorDia();
-                  },
-                  itemBuilder: (item) => item,
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Título do gráfico
-            const Text(
-              'Dias de Vencimento',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-
-            // Cartão do gráfico
-            Expanded(
-              child: Card(
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16)),
-                elevation: 4,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: _buildBarChart(),
-                ),
+  Widget _buildPieChart() {
+    return SizedBox(
+      height: 220,
+      child: pieSections.isEmpty
+          ? const Center(child: Text('Nenhum dado disponível'))
+          : PieChart(
+              PieChartData(
+                sections: pieSections,
+                sectionsSpace: 2,
+                centerSpaceRadius: 40,
               ),
+              swapAnimationDuration: const Duration(milliseconds: 500),
+              swapAnimationCurve: Curves.easeInOut,
             ),
-          ],
+    );
+  }
+
+  Widget _buildDropdown<T>({
+    required String label,
+    required T value,
+    required List<T> items,
+    required ValueChanged<T?> onChanged,
+    required String Function(T) itemBuilder,
+  }) {
+    return Expanded(
+      child: DropdownButtonFormField<T>(
+        value: value,
+        items: items
+            .map((item) => DropdownMenuItem(
+                  value: item,
+                  child: Text(itemBuilder(item)),
+                ))
+            .toList(),
+        onChanged: onChanged,
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(),
         ),
       ),
     );
