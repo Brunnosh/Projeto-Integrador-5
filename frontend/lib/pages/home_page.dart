@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'dashboard.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -351,8 +352,22 @@ class _HomePageState extends State<HomePage> {
             ElevatedButton.icon(
               icon: const Icon(Icons.pie_chart),
               label: const Text('Ver Dashboard'),
-              onPressed: () {
-                // Navegar para tela de dashboard
+              onPressed: () async {
+                final prefs = await SharedPreferences.getInstance();
+                final userId = prefs.getString('userId');
+                if (userId != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const DashboardPage(),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('ID do usuário não encontrado')),
+                  );
+                }
               },
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
