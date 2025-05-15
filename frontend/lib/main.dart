@@ -23,6 +23,12 @@ class MyFinanceApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
+        primarySwatch: Colors.blue, // azul padrão do Flutter
+        appBarTheme: AppBarTheme(
+          backgroundColor: Color(0xFF2F80ED), // seu azulzinho preferido
+          foregroundColor: Colors.white, // cor dos textos e ícones no AppBar
+          elevation: 4,
+        ),
       ),
       debugShowCheckedModeBanner: false,
       initialRoute: '/login',

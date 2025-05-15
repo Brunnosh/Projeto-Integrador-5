@@ -92,7 +92,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final response = await http.get(url);
 
     if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body);
+      final List<dynamic> data = json.decode(utf8.decode(response.bodyBytes));
 
       setState(() {
         barGroups = data.asMap().entries.map((entry) {
@@ -128,26 +128,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
         pieSections = data.asMap().entries.map((entry) {
           final index = entry.key;
           final item = entry.value;
-          // final colors = [
-          //   Colors.redAccent,
-          //   Colors.green,
-          //   Colors.blue,
-          //   Colors.orange,
-          //   Colors.purple,
-          //   Colors.cyan,
-          // ];
-          final colors = bluePalette; // usa a mesma paleta
+
+          final colors = bluePalette;
+          final total = data.fold<double>(0, (sum, e) => sum + e['quantidade']);
+          final percentual = (item['quantidade'] / total) * 100;
 
           return PieChartSectionData(
             value: item['quantidade'].toDouble(),
-            title: item['categoria'],
+            title: '',
             color: colors[index % colors.length],
             radius: 60,
-            titleStyle: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+            badgeWidget: Container(
+              width: 100,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    item['categoria'],
+                    softWrap: true,
+                    overflow: TextOverflow.visible,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  Text(
+                    '${percentual.toStringAsFixed(1)}%',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.black,
+                      fontWeight: FontWeight.normal,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
+            badgePositionPercentageOffset: 1.6,
+            showTitle: false,
           );
         }).toList();
       });
@@ -207,7 +228,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _buildBarChart(),
             const SizedBox(height: 24),
             const Text(
-              'Distribuição por Categoria',
+              'Despesas por Categoria',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
