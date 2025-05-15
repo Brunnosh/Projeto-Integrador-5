@@ -24,6 +24,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _diaVencimentoUrl = '';
   String _despesasCategoriaUrl = '';
 
+  final List<Color> bluePalette = [
+    Color(0xFF56CCF2), // azul claro
+    Color(0xFF2F80ED), // azul médio
+    Color(0xFFBB6BD9), // lilás
+    Color(0xFF9B51E0), // roxo claro
+    Color(0xFF6FCF97), // verde menta
+    Color(0xFF219653), // verde escuro
+  ];
   final Map<String, int> monthToNumber = {
     'Janeiro': 1,
     'Fevereiro': 2,
@@ -87,13 +95,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final List<dynamic> data = json.decode(response.body);
 
       setState(() {
-        barGroups = data.map((item) {
+        barGroups = data.asMap().entries.map((entry) {
+          final index = entry.key;
+          final item = entry.value;
+
           return BarChartGroupData(
             x: item['dia'],
             barRods: [
               BarChartRodData(
                 toY: item['quantidade'].toDouble(),
-                color: Colors.teal,
+                color: bluePalette[index % bluePalette.length], // aqui
                 width: 16,
                 borderRadius: BorderRadius.circular(4),
               ),
@@ -117,14 +128,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
         pieSections = data.asMap().entries.map((entry) {
           final index = entry.key;
           final item = entry.value;
-          final colors = [
-            Colors.redAccent,
-            Colors.green,
-            Colors.blue,
-            Colors.orange,
-            Colors.purple,
-            Colors.cyan,
-          ];
+          // final colors = [
+          //   Colors.redAccent,
+          //   Colors.green,
+          //   Colors.blue,
+          //   Colors.orange,
+          //   Colors.purple,
+          //   Colors.cyan,
+          // ];
+          final colors = bluePalette; // usa a mesma paleta
 
           return PieChartSectionData(
             value: item['quantidade'].toDouble(),
