@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../utils/environment.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 String _cadastroUrl = '';
@@ -14,6 +16,8 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
+  final _dateController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -83,7 +87,7 @@ class _RegisterPageState extends State<RegisterPage> {
     final requestBody = {
       'nome': _firstNameController.text,
       'sobrenome': _lastNameController.text,
-      'data_nascimento': _selectedDate?.toIso8601String(),
+      'data_nascimento': _selectedDate?.toIso8601String().split('T')[0],
       'email': _emailController.text,
       'senha': _passwordController.text,
       'confirmar_senha': _confirmPasswordController.text,
@@ -151,9 +155,8 @@ class _RegisterPageState extends State<RegisterPage> {
     return Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.blue,
-          foregroundColor: Colors.white, // Deixa o título e ícone brancos
-          iconTheme: const IconThemeData(
-              color: Colors.white), // Garante que o ícone "voltar" fique branco
+          foregroundColor: Colors.white,
+          iconTheme: const IconThemeData(color: Colors.white),
           title: const Text('Criar Conta'),
           elevation: 0,
         ),
@@ -163,6 +166,40 @@ class _RegisterPageState extends State<RegisterPage> {
             currentStep: _currentStep,
             onStepContinue: _onStepContinue,
             onStepCancel: _onStepCancel,
+            controlsBuilder: (context, ControlsDetails details) {
+              final isLastStep = _currentStep == 1;
+              return Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: Row(
+                  children: [
+                    ElevatedButton(
+                      onPressed: details.onStepContinue,
+                      style: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        backgroundColor: Colors.blue,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
+                      ),
+                      child: Text(isLastStep ? 'Salvar' : 'Continuar'),
+                    ),
+                    const SizedBox(width: 16),
+                    if (_currentStep > 0)
+                      OutlinedButton(
+                        onPressed: details.onStepCancel,
+                        style: OutlinedButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          side: const BorderSide(color: Colors.blue),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12),
+                        ),
+                        child: const Text('Voltar'),
+                      ),
+                  ],
+                ),
+              );
+            },
             steps: [
               Step(
                 title: const Text('Dados Pessoais'),
@@ -202,55 +239,85 @@ class _RegisterPageState extends State<RegisterPage> {
 
   Widget _buildTextField(String label, TextEditingController controller,
       {bool obscureText = false, String? Function(String?)? validator}) {
-    return TextFormField(
-      controller: controller,
-      obscureText: obscureText,
-      validator: validator,
-      decoration: InputDecoration(labelText: label),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: TextFormField(
+        controller: controller,
+        obscureText: obscureText,
+        validator: validator,
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.blue, width: 2),
+          ),
+        ),
+      ),
     );
   }
 
   Widget _buildDropdown(String label, List<String> items, String value) {
-    return DropdownButtonFormField<String>(
-      value: value,
-      onChanged: (newValue) => setState(() => _selectedState = newValue!),
-      items: items
-          .map((item) => DropdownMenuItem(value: item, child: Text(item)))
-          .toList(),
-      decoration: InputDecoration(labelText: label),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: DropdownButtonFormField<String>(
+        value: value,
+        onChanged: (newValue) => setState(() => _selectedState = newValue!),
+        items: items
+            .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+            .toList(),
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
     );
   }
 
   Widget _buildDatePicker(String label) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label),
-        const SizedBox(height: 8),
-        GestureDetector(
-          onTap: () async {
+    return TextFormField(
+      controller: _dateController,
+      keyboardType: TextInputType.number,
+      inputFormatters: [DateInputFormatter()],
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        suffixIcon: IconButton(
+          icon: const Icon(Icons.calendar_today),
+          onPressed: () async {
             final pickedDate = await showDatePicker(
               context: context,
-              initialDate: DateTime.now(),
+              initialDate: _selectedDate ?? DateTime.now(),
               firstDate: DateTime(1900),
               lastDate: DateTime.now(),
             );
             if (pickedDate != null) {
-              setState(() => _selectedDate = pickedDate);
+              setState(() {
+                _selectedDate = pickedDate;
+                _dateController.text =
+                    DateFormat('dd/MM/yyyy').format(pickedDate);
+              });
             }
           },
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.blue),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(_selectedDate == null
-                ? 'Selecione a data'
-                : _selectedDate.toString().split(' ')[0]),
-          ),
         ),
-      ],
+      ),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Data de nascimento é obrigatória';
+        }
+        try {
+          final parts = value.split('/');
+          if (parts.length != 3) throw Exception();
+          final day = int.parse(parts[0]);
+          final month = int.parse(parts[1]);
+          final year = int.parse(parts[2]);
+          _selectedDate =
+              DateTime(year, month, day); // define a data para envio
+        } catch (_) {
+          return 'Data inválida';
+        }
+        return null;
+      },
     );
   }
 
@@ -281,5 +348,25 @@ class _RegisterPageState extends State<RegisterPage> {
       return 'As senhas não coincidem';
     }
     return null;
+  }
+}
+
+class DateInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    var text = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    final buffer = StringBuffer();
+    for (int i = 0; i < text.length && i < 8; i++) {
+      if (i == 2 || i == 4) buffer.write('/');
+      buffer.write(text[i]);
+    }
+
+    final formatted = buffer.toString();
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
   }
 }
