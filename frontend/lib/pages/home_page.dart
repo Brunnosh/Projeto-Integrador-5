@@ -313,7 +313,7 @@ class _HomePageState extends State<HomePage> {
                 final userId = prefs.getString('userId');
                 final mes = monthToNumber[selectedMonth];
 
-                Navigator.pushNamed(
+                await Navigator.pushNamed(
                   context,
                   '/receitas-detalhadas',
                   arguments: {
@@ -322,6 +322,7 @@ class _HomePageState extends State<HomePage> {
                     'ano': selectedYear,
                   },
                 );
+                _loadData();
               },
             ),
             _buildCard(
@@ -334,7 +335,7 @@ class _HomePageState extends State<HomePage> {
                 final userId = prefs.getString('userId');
                 final mes = monthToNumber[selectedMonth];
 
-                Navigator.pushNamed(
+                await Navigator.pushNamed(
                   context,
                   '/despesas-detalhadas',
                   arguments: {
@@ -343,6 +344,7 @@ class _HomePageState extends State<HomePage> {
                     'ano': selectedYear,
                   },
                 );
+                _loadData();
               },
             ),
             const SizedBox(height: 20),

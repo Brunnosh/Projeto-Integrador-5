@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/pages/edit_despesa.dart';
+import 'package:frontend/pages/edit_receita.dart';
 import 'pages/login_page.dart';
 import 'pages/register_page.dart';
 import 'pages/home_page.dart';
@@ -32,6 +34,8 @@ class MyFinanceApp extends StatelessWidget {
         '/inserir-receitas': (context) => const InserirReceitaPage(),
         '/receitas-detalhadas': (context) => const ReceitasDetalhadasPage(),
         '/despesas-detalhadas': (context) => const DespesasDetalhadasPage(),
+        '/edit-despesa': (context) => const EditDespesaPage(),
+        '/edit-receita': (context) => const EditReceitaPage(),
       },
     );
   }
