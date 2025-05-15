@@ -8,7 +8,6 @@ import 'pages/inserir_despesas.dart';
 import 'pages/inserir_receitas.dart';
 import 'pages/receitas_detalhadas.dart';
 import 'pages/despesas_detalhadas.dart';
-import 'pages/dashboard.dart';
 
 void main() {
   runApp(const MyFinanceApp());
@@ -24,6 +23,12 @@ class MyFinanceApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
+        primarySwatch: Colors.blue, // azul padrão do Flutter
+        appBarTheme: AppBarTheme(
+          backgroundColor: Color(0xFF2F80ED), // seu azulzinho preferido
+          foregroundColor: Colors.white, // cor dos textos e ícones no AppBar
+          elevation: 4,
+        ),
       ),
       debugShowCheckedModeBanner: false,
       initialRoute: '/login',
@@ -35,7 +40,6 @@ class MyFinanceApp extends StatelessWidget {
         '/inserir-receitas': (context) => const InserirReceitaPage(),
         '/receitas-detalhadas': (context) => const ReceitasDetalhadasPage(),
         '/despesas-detalhadas': (context) => const DespesasDetalhadasPage(),
-        '/dashboard': (context) => DashboardPage(),
         '/edit-despesa': (context) => const EditDespesaPage(),
         '/edit-receita': (context) => const EditReceitaPage(),
       },

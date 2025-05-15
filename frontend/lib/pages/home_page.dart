@@ -359,7 +359,8 @@ class _HomePageState extends State<HomePage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const DashboardPage(),
+                      builder: (context) =>
+                          DashboardScreen(idLogin: int.parse(userId)),
                     ),
                   );
                 } else {

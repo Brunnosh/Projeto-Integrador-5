@@ -84,7 +84,8 @@ def despesas_detalhadas(id_login: str, mes: int, ano: int, db: Session = Depends
                 "valor": r.valor,
                 "data_vencimento": r.data_vencimento,
                 "recorrencia": r.recorrencia,
-                "fim_recorrencia": None
+                "fim_recorrencia": None,
+                "id_categoria": r.id_categoria
             })
         elif r.recorrencia and (data_consulta >= data_base and (fim is None or data_consulta <= fim)):
             resultado.append({
@@ -93,7 +94,8 @@ def despesas_detalhadas(id_login: str, mes: int, ano: int, db: Session = Depends
                 "valor": r.valor,
                 "data_vencimento": r.data_vencimento,
                 "recorrencia": r.recorrencia,
-                "fim_recorrencia": r.fim_recorrencia
+                "fim_recorrencia": r.fim_recorrencia,
+                "id_categoria": r.id_categoria
             })
 
     return resultado
