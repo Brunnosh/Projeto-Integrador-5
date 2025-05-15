@@ -17,6 +17,15 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   final _dateController = TextEditingController();
+  final _formKeyStep1 = GlobalKey<FormState>();
+  final _formKeyStep2 = GlobalKey<FormState>();
+
+  String? _validateRequired(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Campo obrigatório';
+    }
+    return null;
+  }
 
   @override
   void initState() {
@@ -137,10 +146,18 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   void _onStepContinue() {
-    if (_currentStep < 1) {
-      setState(() => _currentStep++);
-    } else {
-      registerUser();
+    if (_currentStep == 0) {
+      if (_formKeyStep1.currentState!.validate()) {
+        setState(() => _currentStep++);
+      } else {
+        _showSnackbar('Preencha todos os campos obrigatórios.');
+      }
+    } else if (_currentStep == 1) {
+      if (_formKeyStep2.currentState!.validate()) {
+        registerUser();
+      } else {
+        _showSnackbar('Preencha todos os campos obrigatórios.');
+      }
     }
   }
 
@@ -178,6 +195,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                         backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
                             horizontal: 24, vertical: 12),
                       ),
@@ -203,34 +221,45 @@ class _RegisterPageState extends State<RegisterPage> {
             steps: [
               Step(
                 title: const Text('Dados Pessoais'),
-                content: Column(
-                  children: [
-                    _buildTextField('Nome', _firstNameController),
-                    _buildTextField('Sobrenome', _lastNameController),
-                    _buildDatePicker('Data de Nascimento'),
-                    _buildTextField('E-mail', _emailController,
-                        validator: _validateEmail),
-                    _buildTextField('Senha', _passwordController,
-                        obscureText: true, validator: _validatePassword),
-                    _buildTextField(
-                        'Confirmar Senha', _confirmPasswordController,
-                        obscureText: true, validator: _validateConfirmPassword),
-                  ],
-                ),
+                content: Form(
+                    key: _formKeyStep1,
+                    child: Column(
+                      children: [
+                        _buildTextField('Nome', _firstNameController,
+                            validator: _validateRequired),
+                        _buildTextField('Sobrenome', _lastNameController,
+                            validator: _validateRequired),
+                        _buildDatePicker('Data de Nascimento'),
+                        _buildTextField('E-mail', _emailController,
+                            validator: _validateEmail),
+                        _buildTextField('Senha', _passwordController,
+                            obscureText: true, validator: _validatePassword),
+                        _buildTextField(
+                            'Confirmar Senha', _confirmPasswordController,
+                            obscureText: true,
+                            validator: _validateConfirmPassword),
+                      ],
+                    )),
               ),
               Step(
                 title: const Text('Endereço'),
-                content: Column(
-                  children: [
-                    _buildDropdown(
-                        'Estado', _stateMap.keys.toList(), _selectedState),
-                    _buildTextField('CEP', _cepController),
-                    _buildTextField('Bairro', _neighborhoodController),
-                    _buildTextField('Rua', _streetController),
-                    _buildTextField('Numero', _numberController),
-                    _buildTextField('Complemento', _complementController),
-                  ],
-                ),
+                content: Form(
+                    key: _formKeyStep2,
+                    child: Column(
+                      children: [
+                        _buildDropdown(
+                            'Estado', _stateMap.keys.toList(), _selectedState),
+                        _buildTextField('CEP', _cepController,
+                            validator: _validateRequired),
+                        _buildTextField('Bairro', _neighborhoodController,
+                            validator: _validateRequired),
+                        _buildTextField('Rua', _streetController,
+                            validator: _validateRequired),
+                        _buildTextField('Numero', _numberController,
+                            validator: _validateRequired),
+                        _buildTextField('Complemento', _complementController),
+                      ],
+                    )),
               ),
             ],
           ),
@@ -247,6 +276,7 @@ class _RegisterPageState extends State<RegisterPage> {
         validator: validator,
         decoration: InputDecoration(
           labelText: label,
+          errorMaxLines: 3,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
@@ -337,6 +367,14 @@ class _RegisterPageState extends State<RegisterPage> {
     if (value == null || value.isEmpty) {
       return 'Senha é obrigatória';
     }
+
+    final isStrongPassword = RegExp(
+        r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$');
+
+    if (!isStrongPassword.hasMatch(value)) {
+      return 'A senha deve ter pelo menos 8 caracteres, incluindo letra maiúscula, minúscula, número e caractere especial';
+    }
+
     return null;
   }
 
