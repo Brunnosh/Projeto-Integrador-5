@@ -20,9 +20,11 @@ class _HomePageState extends State<HomePage> {
   double receitas = 0.0;
   double despesas = 0.0;
   String userEmail = '';
+  String userName = '';
   String _userApiUrl = '';
   String _receitasUrl = '';
   String _despesasUrl = '';
+  String _dadosUsuarioUrl = '';
 
   final Map<String, int> monthToNumber = {
     'Janeiro': 1,
@@ -73,9 +75,11 @@ class _HomePageState extends State<HomePage> {
       _userApiUrl = '$baseUrl/me';
       _receitasUrl = '$baseUrl/total-receitas';
       _despesasUrl = '$baseUrl/total-despesas';
+      _dadosUsuarioUrl = '$baseUrl/get-usuario';
     });
     await _getUserEmail();
-    _loadData();
+    await _loadData();
+    await _getDadosUsuario();
   }
 
   Future<void> _getUserEmail() async {
@@ -111,6 +115,37 @@ class _HomePageState extends State<HomePage> {
         userEmail = 'Erro de conexão';
       });
     }
+  }
+
+  Future<Map<String, dynamic>?> _getDadosUsuario() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+    final userId = prefs.getString('userId');
+
+    if (token == null || userId == null) return null;
+
+    final url = '$_dadosUsuarioUrl?id_login=$userId';
+
+    try {
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          userName = data['nome'] ?? '';
+        });
+        return data;
+      }
+    } catch (e) {
+      debugPrint('Erro ao buscar dados do usuário: $e');
+    }
+
+    return null;
   }
 
   Future<void> _loadData() async {
@@ -273,7 +308,7 @@ class _HomePageState extends State<HomePage> {
         padding: const EdgeInsets.all(16),
         child: ListView(
           children: [
-            Text('Bem-vindo, $userEmail',
+            Text('Bem-vindo, $userName!',
                 style: Theme.of(context).textTheme.bodyLarge),
             const SizedBox(height: 30),
             Row(
