@@ -122,7 +122,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final response = await http.get(url);
 
     if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body);
+      final List<dynamic> data = json.decode(utf8.decode(response.bodyBytes));
 
       setState(() {
         pieSections = data.asMap().entries.map((entry) {
@@ -167,7 +167,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ],
               ),
             ),
-            badgePositionPercentageOffset: 1.6,
+            badgePositionPercentageOffset: 1.0,
             showTitle: false,
           );
         }).toList();
@@ -250,12 +250,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 barGroups: barGroups,
                 titlesData: FlTitlesData(
                   bottomTitles: AxisTitles(
+                    axisNameWidget: const Text(
+                      'Dia',
+                      style:
+                          TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                    axisNameSize: 24,
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (value, _) => Text('${value.toInt()}'),
                     ),
                   ),
                   leftTitles: AxisTitles(
+                    axisNameWidget: const Text(
+                      'Quantidade',
+                      style:
+                          TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                    axisNameSize: 28,
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (value, _) => Text('${value.toInt()}'),

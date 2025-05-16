@@ -316,7 +316,7 @@ class _HomePageState extends State<HomePage> {
         padding: const EdgeInsets.all(16),
         child: ListView(
           children: [
-            Text('Bem-vindo, $userName!',
+            Text('Olá, $userName!',
                 style: Theme.of(context).textTheme.bodyLarge),
             const SizedBox(height: 30),
             Row(
@@ -345,7 +345,7 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
             const SizedBox(height: 20),
-            _buildCard('Saldo Atual', saldo, Colors.blue,
+            _buildCard('Saldo Final', saldo, Colors.blue,
                 Icons.account_balance_wallet),
             _buildCard(
               'Receitas',
