@@ -55,7 +55,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _streetController = TextEditingController();
   final _numberController = TextEditingController();
   final _complementController = TextEditingController();
-  String _selectedState = 'AC';
+  String _selectedState = 'Selecione';
   DateTime? _selectedDate;
 
   final Map<String, int> _stateMap = {
@@ -225,19 +225,18 @@ class _RegisterPageState extends State<RegisterPage> {
                     key: _formKeyStep1,
                     child: Column(
                       children: [
-                        _buildTextField('Nome', _firstNameController,
+                        _buildTextField('Nome *', _firstNameController,
                             validator: _validateRequired),
-                        _buildTextField('Sobrenome', _lastNameController,
+                        _buildTextField('Sobrenome *', _lastNameController,
                             validator: _validateRequired),
-                        _buildDatePicker('Data de Nascimento'),
-                        _buildTextField('E-mail', _emailController,
+                        _buildDatePicker('Data de Nascimento *'),
+                        _buildTextField('E-mail *', _emailController,
                             validator: _validateEmail),
-                        _buildTextField('Senha', _passwordController,
+                        _buildTextField('Senha *', _passwordController,
                             obscureText: true, validator: _validatePassword),
                         _buildTextField(
-                            'Confirmar Senha', _confirmPasswordController,
-                            obscureText: true,
-                            validator: _validateConfirmPassword),
+                            'Confirmar Senha *', _confirmPasswordController,
+                            obscureText: true, validator: _validatePassword),
                       ],
                     )),
               ),
@@ -247,15 +246,15 @@ class _RegisterPageState extends State<RegisterPage> {
                     key: _formKeyStep2,
                     child: Column(
                       children: [
-                        _buildDropdown(
-                            'Estado', _stateMap.keys.toList(), _selectedState),
-                        _buildTextField('CEP', _cepController,
+                        _buildDropdown('Estado *', _stateMap.keys.toList(),
+                            _selectedState),
+                        _buildTextField('CEP *', _cepController,
                             validator: _validateRequired),
-                        _buildTextField('Bairro', _neighborhoodController,
+                        _buildTextField('Bairro *', _neighborhoodController,
                             validator: _validateRequired),
-                        _buildTextField('Rua', _streetController,
+                        _buildTextField('Rua *', _streetController,
                             validator: _validateRequired),
-                        _buildTextField('Numero', _numberController,
+                        _buildTextField('Numero *', _numberController,
                             validator: _validateRequired),
                         _buildTextField('Complemento', _complementController),
                       ],
@@ -288,6 +287,7 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Widget _buildDropdown(String label, List<String> items, String value) {
+    final dropdownItems = ['Selecione', ...items];
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: DropdownButtonFormField<String>(
@@ -300,6 +300,12 @@ class _RegisterPageState extends State<RegisterPage> {
           labelText: label,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         ),
+        validator: (value) {
+          if (value == null || value == 'Selecione') {
+            return 'Selecione um estado válido';
+          }
+          return null;
+        },
       ),
     );
   }
@@ -368,6 +374,10 @@ class _RegisterPageState extends State<RegisterPage> {
       return 'Senha é obrigatória';
     }
 
+    if (_confirmPasswordController.value != _passwordController.value) {
+      return 'As senhas não coincidem';
+    }
+
     final isStrongPassword = RegExp(
         r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$');
 
@@ -375,16 +385,6 @@ class _RegisterPageState extends State<RegisterPage> {
       return 'A senha deve ter pelo menos 8 caracteres, incluindo letra maiúscula, minúscula, número e caractere especial';
     }
 
-    return null;
-  }
-
-  String? _validateConfirmPassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Confirmar senha é obrigatório';
-    }
-    if (value != _passwordController.text) {
-      return 'As senhas não coincidem';
-    }
     return null;
   }
 }

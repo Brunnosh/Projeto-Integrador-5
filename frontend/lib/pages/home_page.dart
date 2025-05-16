@@ -275,7 +275,7 @@ class _HomePageState extends State<HomePage> {
           children: [
             Text('Bem-vindo, $userEmail',
                 style: Theme.of(context).textTheme.bodyLarge),
-            const SizedBox(height: 20),
+            const SizedBox(height: 30),
             Row(
               children: [
                 _buildDropdown<String>(
