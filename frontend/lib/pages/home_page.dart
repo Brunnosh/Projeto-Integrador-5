@@ -297,6 +297,14 @@ class _HomePageState extends State<HomePage> {
         title: const Text('MyFinance'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Configurações',
+            onPressed: () {
+              // Direcionar para configurações
+              // Navigator.pushNamed(context, '/config');
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () {
               Navigator.pushReplacementNamed(context, '/login');
