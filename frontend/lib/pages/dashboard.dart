@@ -20,9 +20,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   List<BarChartGroupData> barGroups = [];
   List<PieChartSectionData> pieSections = [];
+  List<FlSpot> receitaSpots = [];
+  List<String> receitaLabels = [];
 
   String _diaVencimentoUrl = '';
   String _despesasCategoriaUrl = '';
+  String _receitasPorMesUrl = '';
 
   final List<Color> bluePalette = [
     Color(0xFF56CCF2), // azul claro
@@ -67,9 +70,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     setState(() {
       _diaVencimentoUrl = '$baseUrl/contagem-despesas-por-dia-vencimento';
       _despesasCategoriaUrl = '$baseUrl/contagem-despesas-por-categoria';
+      _receitasPorMesUrl = '$baseUrl/total-receitas-periodo';
     });
     _loadDespesasPorDiaVencimento();
     _loadDespesasPorCategoria();
+    _loadReceitasPorPeriodo();
   }
 
   Future<bool> isRunningOnEmulator() async {
@@ -175,6 +180,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  Future<void> _loadReceitasPorPeriodo() async {
+    final mes = monthToNumber[selectedMonth];
+    final url = Uri.parse(
+        '$_receitasPorMesUrl?id_login=${widget.idLogin}&mes=$mes&ano=$selectedYear');
+
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(utf8.decode(response.bodyBytes));
+
+      setState(() {
+        receitaSpots = [];
+        receitaLabels = [];
+
+        for (int i = 0; i < data.length; i++) {
+          final item = data[i];
+          receitaSpots
+              .add(FlSpot(i.toDouble(), (item['valor'] as num).toDouble()));
+          receitaLabels
+              .add('${item['mes'].toString().padLeft(2, '0')}/${item['ano']}');
+        }
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -183,59 +213,70 @@ class _DashboardScreenState extends State<DashboardScreen> {
         centerTitle: true,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Card(
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              elevation: 2,
-              margin: const EdgeInsets.only(bottom: 16),
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    _buildDropdown<String>(
-                      label: 'Mês',
-                      value: selectedMonth,
-                      items: monthToNumber.keys.toList(),
-                      onChanged: (value) {
-                        setState(() => selectedMonth = value!);
-                        _setupApi();
-                      },
-                      itemBuilder: (item) => item,
+          padding: const EdgeInsets.all(16),
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                Card(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  elevation: 2,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        _buildDropdown<String>(
+                          label: 'Mês',
+                          value: selectedMonth,
+                          items: monthToNumber.keys.toList(),
+                          onChanged: (value) {
+                            setState(() => selectedMonth = value!);
+                            _setupApi();
+                          },
+                          itemBuilder: (item) => item,
+                        ),
+                        const SizedBox(width: 12),
+                        _buildDropdown<String>(
+                          label: 'Ano',
+                          value: selectedYear,
+                          items: years,
+                          onChanged: (value) {
+                            setState(() => selectedYear = value!);
+                            _setupApi();
+                          },
+                          itemBuilder: (item) => item,
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    _buildDropdown<String>(
-                      label: 'Ano',
-                      value: selectedYear,
-                      items: years,
-                      onChanged: (value) {
-                        setState(() => selectedYear = value!);
-                        _setupApi();
-                      },
-                      itemBuilder: (item) => item,
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+                // Gráfico Despesas por Dia de Vencimento
+                const Text(
+                  'Despesas por Dia de Vencimento',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                _buildBarChart(),
+                // Gráfico Despesas por Categoria
+                const SizedBox(height: 24),
+                const Text(
+                  'Despesas por Categoria',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                _buildPieChart(),
+                // Gráfico Receitas por Mês
+                const SizedBox(height: 24),
+                const Text(
+                  'Receitas por Mês',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 12),
+                _buildLineChart(),
+              ],
             ),
-            const Text(
-              'Despesas por Dia de Vencimento',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            _buildBarChart(),
-            const SizedBox(height: 24),
-            const Text(
-              'Despesas por Categoria',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            _buildPieChart(),
-          ],
-        ),
-      ),
+          )),
     );
   }
 
@@ -324,6 +365,87 @@ class _DashboardScreenState extends State<DashboardScreen> {
         decoration: InputDecoration(
           labelText: label,
           border: const OutlineInputBorder(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLineChart() {
+    final lineColor = bluePalette[0];
+
+    if (receitaSpots.isEmpty) {
+      return const SizedBox(
+        height: 220,
+        child: Center(child: Text('Nenhum dado disponível')),
+      );
+    }
+
+    // Encontra o valor máximo do eixo Y
+    final double maxY =
+        receitaSpots.map((e) => e.y).reduce((a, b) => a > b ? a : b);
+
+    // Define o intervalo: divide o valor máximo em 5 linhas (ajustável)
+    final double intervalY = (maxY / 5).ceilToDouble();
+
+    return SizedBox(
+      height: 220,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12.0),
+        child: LineChart(
+          LineChartData(
+            clipData: FlClipData.none(),
+            minX: 0,
+            maxX: receitaSpots.length > 1 ? receitaSpots.length - 1 : 0,
+            minY: 0,
+            maxY: (maxY + intervalY),
+            lineBarsData: [
+              LineChartBarData(
+                spots: receitaSpots,
+                isCurved: true,
+                color: lineColor,
+                dotData: FlDotData(show: true),
+                belowBarData: BarAreaData(
+                  show: true,
+                  color: lineColor.withOpacity(0.2),
+                ),
+              ),
+            ],
+            titlesData: FlTitlesData(
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  reservedSize: 32,
+                  showTitles: true,
+                  interval: 1,
+                  getTitlesWidget: (value, _) {
+                    final index = value.toInt();
+                    if (index >= 0 && index < receitaLabels.length) {
+                      return Text(receitaLabels[index],
+                          style: const TextStyle(fontSize: 10));
+                    }
+                    return const Text('');
+                  },
+                ),
+              ),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 60,
+                  interval: intervalY,
+                  getTitlesWidget: (value, _) {
+                    return Text(
+                      value.toInt().toString(),
+                      style: const TextStyle(fontSize: 10),
+                    );
+                  },
+                ),
+              ),
+              topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              rightTitles:
+                  AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            ),
+            borderData: FlBorderData(show: false),
+            gridData: FlGridData(show: true),
+          ),
         ),
       ),
     );
