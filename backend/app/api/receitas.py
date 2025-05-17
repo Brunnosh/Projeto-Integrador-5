@@ -1,4 +1,6 @@
 from datetime import date
+from calendar import monthrange
+from fastapi import HTTPException
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import extract
@@ -129,8 +131,37 @@ def atualizar_receita(
     if str(receita_antiga.id_login).strip() != str(id_login).strip():
         raise HTTPException(status_code=403, detail="Você não tem permissão para editar esta receita.")
 
+
+    if not dados.recorrencia:
+        receita_antiga.descricao = dados.descricao
+        receita_antiga.valor = dados.valor
+        receita_antiga.data_recebimento = dados.data_recebimento
+        receita_antiga.recorrencia = False
+        receita_antiga.fim_recorrencia = None
+        db.commit()
+        db.refresh(receita_antiga)
+        return {
+            "mensagem": "Receita não recorrente atualizada com sucesso",
+            "id_receita": receita_antiga.id
+        }
+
     # Passo 1: Encerra a receita antiga
-    receita_antiga.fim_recorrencia = date.today()
+    hoje = date.today()
+    ano_anterior = hoje.year
+    mes_anterior = hoje.month - 1
+
+    if mes_anterior == 0:
+        mes_anterior = 12
+        ano_anterior -= 1
+
+    ultimo_dia_anterior = date(
+        ano_anterior,
+        mes_anterior,
+        monthrange(ano_anterior, mes_anterior)[1]
+    )
+
+    # 🟡 Atualiza a receita antiga
+    receita_antiga.fim_recorrencia = ultimo_dia_anterior
     db.commit()
 
     # Passo 2: Cria nova receita com os dados atualizados
