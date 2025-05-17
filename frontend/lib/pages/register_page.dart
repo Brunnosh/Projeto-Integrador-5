@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -5,8 +8,6 @@ import 'dart:convert';
 import '../utils/environment.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-String _cadastroUrl = '';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -19,6 +20,10 @@ class _RegisterPageState extends State<RegisterPage> {
   final _dateController = TextEditingController();
   final _formKeyStep1 = GlobalKey<FormState>();
   final _formKeyStep2 = GlobalKey<FormState>();
+  Map<int, String> estadosMap = {};
+
+  String _cadastroUrl = '';
+  String _estadosUrl = '';
 
   String? _validateRequired(String? value) {
     if (value == null || value.isEmpty) {
@@ -33,13 +38,25 @@ class _RegisterPageState extends State<RegisterPage> {
     _setupApiUrl();
   }
 
+  Future<bool> isRunningOnEmulator() async {
+    final deviceInfo = DeviceInfoPlugin();
+    if (Platform.isAndroid) {
+      final androidInfo = await deviceInfo.androidInfo;
+      return !androidInfo.isPhysicalDevice;
+    } else if (Platform.isIOS) {
+      final iosInfo = await deviceInfo.iosInfo;
+      return !iosInfo.isPhysicalDevice;
+    }
+    return false;
+  }
+
   Future<void> _setupApiUrl() async {
     final isEmulator = await isRunningOnEmulator();
-    setState(() {
-      _cadastroUrl = isEmulator
-          ? 'http://10.0.2.2:8000/cadastro' // URL para emulador Android
-          : 'http://localhost:8000/cadastro'; // URL para dispositivo físico ou em desktop
-    });
+    final baseUrl =
+        isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
+    _cadastroUrl = '$baseUrl/cadastro';
+    _estadosUrl = '$baseUrl/estados';
+    await _carregarEstados();
   }
 
   int _currentStep = 0;
@@ -58,35 +75,24 @@ class _RegisterPageState extends State<RegisterPage> {
   String _selectedState = 'Selecione';
   DateTime? _selectedDate;
 
-  final Map<String, int> _stateMap = {
-    'AC': 1,
-    'AL': 2,
-    'AP': 3,
-    'AM': 4,
-    'BA': 5,
-    'CE': 6,
-    'DF': 7,
-    'ES': 8,
-    'GO': 9,
-    'MA': 10,
-    'MT': 11,
-    'MS': 12,
-    'MG': 13,
-    'PA': 14,
-    'PB': 15,
-    'PR': 16,
-    'PE': 17,
-    'PI': 18,
-    'RJ': 19,
-    'RN': 20,
-    'RS': 21,
-    'RO': 22,
-    'RR': 23,
-    'SC': 24,
-    'SP': 25,
-    'SE': 26,
-    'TO': 27
-  };
+  Future<void> _carregarEstados() async {
+    try {
+      final response = await http.get(Uri.parse(_estadosUrl));
+      if (response.statusCode == 200) {
+        final String bodyUtf8 = utf8.decode(response.bodyBytes);
+        final List<dynamic> estados = jsonDecode(bodyUtf8);
+        setState(() {
+          estadosMap = {
+            for (var estado in estados) estado['id']: estado['nome']
+          };
+        });
+      } else {
+        print('Erro ao carregar estados: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Erro ao carregar estados: $e');
+    }
+  }
 
   Future<void> registerUser() async {
     if (!_formKey.currentState!.validate()) {
@@ -102,7 +108,10 @@ class _RegisterPageState extends State<RegisterPage> {
       'confirmar_senha': _confirmPasswordController.text,
       'endereco': {
         'cep': _cepController.text,
-        'id_estado': _stateMap[_selectedState],
+        'id_estado': estadosMap.entries
+            .firstWhere((e) => e.value == _selectedState,
+                orElse: () => const MapEntry(0, ''))
+            .key,
         'bairro': _neighborhoodController.text,
         'rua': _streetController.text,
         'numero': _numberController.text,
@@ -246,7 +255,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     key: _formKeyStep2,
                     child: Column(
                       children: [
-                        _buildDropdown('Estado *', _stateMap.keys.toList(),
+                        _buildDropdown('Estado *', estadosMap.values.toList(),
                             _selectedState),
                         _buildTextField('CEP *', _cepController,
                             validator: _validateRequired),
