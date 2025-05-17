@@ -164,7 +164,7 @@ class _EditReceitaPageState extends State<EditReceitaPage> {
                   _buildTextField('Valor', _valorController,
                       keyboardType: TextInputType.number),
                   _buildDatePicker('Data de Recebimento'),
-                  _buildCheckbox('Recorrente', _recorrente),
+                  if (_recorrente) _buildCheckbox('Recorrente', _recorrente),
                   if (_recorrente)
                     _buildFimRecorrenciaPicker('Fim da Recorrência'),
                 ],
