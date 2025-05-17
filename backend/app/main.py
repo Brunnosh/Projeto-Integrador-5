@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from app.db import SessionLocal
-from app.api import cadastro, login, esqueceu_senha, ler_token, receitas, despesas, categoria, dashboard
+from app.api import cadastro, login, esqueceu_senha, ler_token, receitas, despesas, categoria, dashboard, estados
 import os
 
 app = FastAPI()
@@ -16,6 +16,7 @@ app.include_router(receitas.router)
 app.include_router(despesas.router)
 app.include_router(categoria.router)
 app.include_router(dashboard.router)
+app.include_router(estados.router)
 
 @app.get("/hello")
 def read_hello():

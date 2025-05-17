@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'dashboard.dart';
+import 'config_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -299,9 +300,17 @@ class _HomePageState extends State<HomePage> {
           IconButton(
             icon: const Icon(Icons.settings),
             tooltip: 'Configurações',
-            onPressed: () {
-              // Direcionar para configurações
-              // Navigator.pushNamed(context, '/config');
+            onPressed: () async {
+              final dados = await _getDadosUsuario();
+              if (dados != null && context.mounted) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        ConfiguracoesPage(dadosUsuario: dados),
+                  ),
+                );
+              }
             },
           ),
           IconButton(
