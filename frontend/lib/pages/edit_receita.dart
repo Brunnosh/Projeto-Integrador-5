@@ -68,7 +68,7 @@ class _EditReceitaPageState extends State<EditReceitaPage> {
         setState(() {
           _descricaoController.text = data['descricao'] ?? '';
           _valorController.text = data['valor']?.toString() ?? '';
-          _selectedDate = DateTime.parse(data['data_recebimento']);
+
           _recorrente = data['recorrencia'] ?? false;
           if (data['fim_recorrencia'] != null) {
             _fimRecorrencia = DateTime.tryParse(data['fim_recorrencia']);

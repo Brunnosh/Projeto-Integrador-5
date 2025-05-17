@@ -123,25 +123,37 @@ def atualizar_despesa(
     dados: DespesasCreate,
     db: Session = Depends(get_db)
 ):
-    despesa = db.query(Despesas).filter(Despesas.id == id).first()
+    despesa_antiga = db.query(Despesas).filter(Despesas.id == id).first()
 
-    if not despesa:
+    if not despesa_antiga:
         raise HTTPException(status_code=404, detail="Despesa não encontrada")
 
-    if str(despesa.id_login).strip() != str(id_login).strip():
+    if str(despesa_antiga.id_login).strip() != str(id_login).strip():
         raise HTTPException(status_code=403, detail="Você não tem permissão para editar esta despesa.")
 
-    despesa.descricao = dados.descricao
-    despesa.valor = dados.valor
-    despesa.data_vencimento = dados.data_vencimento
-    despesa.recorrencia = dados.recorrencia
-    despesa.fim_recorrencia = dados.fim_recorrencia
-    despesa.id_categoria = dados.id_categoria
-
+    despesa_antiga.fim_recorrencia = date.today()
     db.commit()
-    db.refresh(despesa)
 
-    return {"mensagem": "Despesa atualizada com sucesso", "id_despesa": despesa.id}
+    nova_despesa = Despesas(
+        id_login=dados.id_login,
+        descricao = dados.descricao,
+        valor = dados.valor,
+        data_vencimento = dados.data_vencimento,
+        recorrencia = dados.recorrencia,
+        fim_recorrencia = dados.fim_recorrencia,
+        id_categoria = dados.id_categoria
+    )
+
+
+    db.add(nova_despesa)
+    db.commit()
+    db.refresh(nova_despesa)
+
+    return {
+        "mensagem": "Despesa atualizada com histórico preservado",
+        "id_nova_despesa": nova_despesa.id,
+        "id_despesa_antiga_encerrada": despesa_antiga.id
+    }
 
 @router.get("/unica-despesa/{id}")
 def obter_despesa(

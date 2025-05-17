@@ -145,7 +145,7 @@ class _ReceitasDetalhadasPageState extends State<ReceitasDetalhadasPage> {
     final isEmulator = await isRunningOnEmulator();
     final baseUrl =
         isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
-    final url = '$baseUrl/receita/$idreceita?id_login=$userId';
+    final url = '$baseUrl/delete-receita/$idreceita?id_login=$userId';
 
     try {
       final response = await http.delete(

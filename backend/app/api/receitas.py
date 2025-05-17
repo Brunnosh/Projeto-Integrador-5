@@ -113,6 +113,7 @@ def deletar_receita(id: int, id_login: str, db: Session = Depends(get_db)):
 
     return {"mensagem": "receita excluída com sucesso", "id_receita": id}
 
+
 @router.put("/update-receita/{id}")
 def atualizar_receita(
     id: int,
@@ -120,25 +121,36 @@ def atualizar_receita(
     dados: ReceitaCreate,
     db: Session = Depends(get_db)
 ):
-    receita = db.query(Receitas).filter(Receitas.id == id).first()
+    receita_antiga = db.query(Receitas).filter(Receitas.id == id).first()
 
-    if not receita:
+    if not receita_antiga:
         raise HTTPException(status_code=404, detail="receita não encontrada")
 
-    if str(receita.id_login).strip() != str(id_login).strip():
+    if str(receita_antiga.id_login).strip() != str(id_login).strip():
         raise HTTPException(status_code=403, detail="Você não tem permissão para editar esta receita.")
 
-    receita.descricao = dados.descricao
-    receita.valor = dados.valor
-    receita.data_recebimento = dados.data_recebimento
-    receita.recorrencia = dados.recorrencia
-    receita.fim_recorrencia = dados.fim_recorrencia
-
-
+    # Passo 1: Encerra a receita antiga
+    receita_antiga.fim_recorrencia = date.today()
     db.commit()
-    db.refresh(receita)
 
-    return {"mensagem": "receita atualizada com sucesso", "id_receita": receita.id}
+    # Passo 2: Cria nova receita com os dados atualizados
+    nova_receita = Receitas(
+        id_login=dados.id_login,
+        descricao=dados.descricao,
+        valor=dados.valor,
+        data_recebimento=dados.data_recebimento,
+        recorrencia=dados.recorrencia,
+        fim_recorrencia=dados.fim_recorrencia
+    )
+    db.add(nova_receita)
+    db.commit()
+    db.refresh(nova_receita)
+
+    return {
+        "mensagem": "Receita atualizada com histórico preservado",
+        "id_nova_receita": nova_receita.id,
+        "id_receita_antiga_encerrada": receita_antiga.id
+    }
 
 @router.get("/unica-receita/{id}")
 def obter_receita(
