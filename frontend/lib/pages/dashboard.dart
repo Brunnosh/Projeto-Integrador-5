@@ -37,6 +37,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     Color(0xFF9B51E0), // roxo claro
     Color(0xFF6FCF97), // verde menta
     Color(0xFF219653), // verde escuro
+    Color(0xFFEB5757) // vermelho suave
   ];
   final Map<String, int> monthToNumber = {
     'Janeiro': 1,
@@ -312,6 +313,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 SizedBox(height: 12),
                 _buildLineChartDespesas(),
+                // Gráfico Receitas x Despesas
+                const SizedBox(height: 24),
+                const Text(
+                  'Receitas x Despesas',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 12),
+                _buildComparativoReceitaDespesaChart(),
               ],
             ),
           )),
@@ -409,7 +418,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildLineChartReceitas() {
-    final lineColor = bluePalette[0];
+    final lineColor = bluePalette[4];
 
     if (receitaSpots.isEmpty) {
       return const SizedBox(
@@ -490,7 +499,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildLineChartDespesas() {
-    final lineColor = bluePalette[0];
+    final lineColor = bluePalette[6];
 
     if (despesaSpots.isEmpty) {
       return const SizedBox(
@@ -565,6 +574,105 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildComparativoReceitaDespesaChart() {
+    final greenColor = bluePalette[4];
+    final redColor = bluePalette[6];
+
+    if (receitaSpots.isEmpty || despesaSpots.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final labels =
+        receitaLabels.length == despesaLabels.length ? receitaLabels : [];
+
+    // Cálculo do maior Y (entre receita e despesa)
+    final allValues = [...receitaSpots, ...despesaSpots].map((e) => e.y);
+    final double maxY = allValues.reduce((a, b) => a > b ? a : b);
+    final double intervalY = (maxY / 5).ceilToDouble();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0),
+          child: SizedBox(
+            height: 250,
+            child: LineChart(
+              LineChartData(
+                clipData: FlClipData.none(),
+                minX: 0,
+                maxX: labels.length > 1 ? labels.length - 1 : 0,
+                minY: 0,
+                maxY: (maxY + intervalY),
+                titlesData: FlTitlesData(
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      interval: 1,
+                      getTitlesWidget: (value, _) {
+                        final index = value.toInt();
+                        if (index < 0 || index >= labels.length) {
+                          return const Text('');
+                        }
+                        return Text(labels[index],
+                            style: const TextStyle(fontSize: 10));
+                      },
+                      reservedSize: 32,
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 60,
+                      interval: intervalY,
+                      getTitlesWidget: (value, _) {
+                        return Text(
+                          value.toInt().toString(),
+                          style: const TextStyle(fontSize: 10),
+                        );
+                      },
+                    ),
+                  ),
+                  rightTitles:
+                      AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles:
+                      AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                ),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: receitaSpots,
+                    isCurved: true,
+                    color: greenColor,
+                    barWidth: 3,
+                    dotData: FlDotData(show: true),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: greenColor.withOpacity(0.2),
+                    ),
+                  ),
+                  LineChartBarData(
+                    spots: despesaSpots,
+                    isCurved: true,
+                    color: redColor,
+                    barWidth: 3,
+                    dotData: FlDotData(show: true),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: redColor.withOpacity(0.2),
+                    ),
+                  ),
+                ],
+                gridData: FlGridData(show: true),
+                borderData: FlBorderData(show: false),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
