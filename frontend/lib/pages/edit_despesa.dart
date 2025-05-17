@@ -190,7 +190,6 @@ class _EditDespesaPageState extends State<EditDespesaPage> {
                   _buildTextField('Valor', _valorController,
                       keyboardType: TextInputType.number),
                   _buildDatePicker('Data de Vencimento'),
-                  if (_recorrente) _buildCheckbox('Recorrente', _recorrente),
                   if (_recorrente)
                     _buildFimRecorrenciaPicker('Fim da Recorrência'),
                   _buildDropdownCategoria(),
