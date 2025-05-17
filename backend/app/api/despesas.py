@@ -1,4 +1,6 @@
 from datetime import date
+from calendar import monthrange
+from fastapi import HTTPException
 from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import extract
@@ -131,7 +133,39 @@ def atualizar_despesa(
     if str(despesa_antiga.id_login).strip() != str(id_login).strip():
         raise HTTPException(status_code=403, detail="Você não tem permissão para editar esta despesa.")
 
-    despesa_antiga.fim_recorrencia = date.today()
+
+    if not dados.recorrencia:
+        despesa_antiga.id_login=dados.id_login,
+        despesa_antiga.descricao = dados.descricao,
+        despesa_antiga.valor = dados.valor,
+        despesa_antiga.data_vencimento = dados.data_vencimento,
+        despesa_antiga.recorrencia = False,
+        despesa_antiga.fim_recorrencia = None,
+        despesa_antiga.id_categoria = dados.id_categoria
+        db.commit()
+        db.refresh(despesa_antiga)
+        return {
+            "mensagem": "Despesa não recorrente atualizada com sucesso",
+            "id_receita": despesa_antiga.id
+        }
+
+    
+    # Passo 1: Encerra a receita antiga
+    hoje = date.today()
+    ano_anterior = hoje.year
+    mes_anterior = hoje.month - 1
+
+    if mes_anterior == 0:
+        mes_anterior = 12
+        ano_anterior -= 1
+
+    ultimo_dia_anterior = date(
+        ano_anterior,
+        mes_anterior,
+        monthrange(ano_anterior, mes_anterior)[1]
+    )
+
+    despesa_antiga.fim_recorrencia = ultimo_dia_anterior
     db.commit()
 
     nova_despesa = Despesas(
