@@ -448,7 +448,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             lineBarsData: [
               LineChartBarData(
                 spots: receitaSpots,
-                isCurved: true,
+                isCurved: false,
                 color: lineColor,
                 dotData: FlDotData(show: true),
                 belowBarData: BarAreaData(

@@ -1,4 +1,6 @@
 from datetime import date
+from calendar import monthrange
+from fastapi import HTTPException
 from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import extract
@@ -123,25 +125,69 @@ def atualizar_despesa(
     dados: DespesasCreate,
     db: Session = Depends(get_db)
 ):
-    despesa = db.query(Despesas).filter(Despesas.id == id).first()
+    despesa_antiga = db.query(Despesas).filter(Despesas.id == id).first()
 
-    if not despesa:
+    if not despesa_antiga:
         raise HTTPException(status_code=404, detail="Despesa não encontrada")
 
-    if str(despesa.id_login).strip() != str(id_login).strip():
+    if str(despesa_antiga.id_login).strip() != str(id_login).strip():
         raise HTTPException(status_code=403, detail="Você não tem permissão para editar esta despesa.")
 
-    despesa.descricao = dados.descricao
-    despesa.valor = dados.valor
-    despesa.data_vencimento = dados.data_vencimento
-    despesa.recorrencia = dados.recorrencia
-    despesa.fim_recorrencia = dados.fim_recorrencia
-    despesa.id_categoria = dados.id_categoria
 
+    if not dados.recorrencia:
+        despesa_antiga.id_login=dados.id_login,
+        despesa_antiga.descricao = dados.descricao,
+        despesa_antiga.valor = dados.valor,
+        despesa_antiga.data_vencimento = dados.data_vencimento,
+        despesa_antiga.recorrencia = False,
+        despesa_antiga.fim_recorrencia = None,
+        despesa_antiga.id_categoria = dados.id_categoria
+        db.commit()
+        db.refresh(despesa_antiga)
+        return {
+            "mensagem": "Despesa não recorrente atualizada com sucesso",
+            "id_receita": despesa_antiga.id
+        }
+
+    
+    # Passo 1: Encerra a receita antiga
+    hoje = date.today()
+    ano_anterior = hoje.year
+    mes_anterior = hoje.month - 1
+
+    if mes_anterior == 0:
+        mes_anterior = 12
+        ano_anterior -= 1
+
+    ultimo_dia_anterior = date(
+        ano_anterior,
+        mes_anterior,
+        monthrange(ano_anterior, mes_anterior)[1]
+    )
+
+    despesa_antiga.fim_recorrencia = ultimo_dia_anterior
     db.commit()
-    db.refresh(despesa)
 
-    return {"mensagem": "Despesa atualizada com sucesso", "id_despesa": despesa.id}
+    nova_despesa = Despesas(
+        id_login=dados.id_login,
+        descricao = dados.descricao,
+        valor = dados.valor,
+        data_vencimento = dados.data_vencimento,
+        recorrencia = dados.recorrencia,
+        fim_recorrencia = dados.fim_recorrencia,
+        id_categoria = dados.id_categoria
+    )
+
+
+    db.add(nova_despesa)
+    db.commit()
+    db.refresh(nova_despesa)
+
+    return {
+        "mensagem": "Despesa atualizada com histórico preservado",
+        "id_nova_despesa": nova_despesa.id,
+        "id_despesa_antiga_encerrada": despesa_antiga.id
+    }
 
 @router.get("/unica-despesa/{id}")
 def obter_despesa(
