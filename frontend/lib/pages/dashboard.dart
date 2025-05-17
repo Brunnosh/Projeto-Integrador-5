@@ -22,10 +22,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<PieChartSectionData> pieSections = [];
   List<FlSpot> receitaSpots = [];
   List<String> receitaLabels = [];
+  List<FlSpot> despesaSpots = [];
+  List<String> despesaLabels = [];
 
   String _diaVencimentoUrl = '';
   String _despesasCategoriaUrl = '';
   String _receitasPorMesUrl = '';
+  String _despesasPorMesUrl = '';
 
   final List<Color> bluePalette = [
     Color(0xFF56CCF2), // azul claro
@@ -71,10 +74,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _diaVencimentoUrl = '$baseUrl/contagem-despesas-por-dia-vencimento';
       _despesasCategoriaUrl = '$baseUrl/contagem-despesas-por-categoria';
       _receitasPorMesUrl = '$baseUrl/total-receitas-periodo';
+      _despesasPorMesUrl = '$baseUrl/total-despesas-periodo';
     });
     _loadDespesasPorDiaVencimento();
     _loadDespesasPorCategoria();
     _loadReceitasPorPeriodo();
+    _loadDespesasPorPeriodo();
   }
 
   Future<bool> isRunningOnEmulator() async {
@@ -205,6 +210,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  Future<void> _loadDespesasPorPeriodo() async {
+    final mes = monthToNumber[selectedMonth];
+    final url = Uri.parse(
+        '$_despesasPorMesUrl?id_login=${widget.idLogin}&mes=$mes&ano=$selectedYear');
+
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(utf8.decode(response.bodyBytes));
+
+      setState(() {
+        despesaSpots = [];
+        despesaLabels = [];
+
+        for (int i = 0; i < data.length; i++) {
+          final item = data[i];
+          despesaSpots
+              .add(FlSpot(i.toDouble(), (item['valor'] as num).toDouble()));
+          despesaLabels
+              .add('${item['mes'].toString().padLeft(2, '0')}/${item['ano']}');
+        }
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -273,7 +303,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 SizedBox(height: 12),
-                _buildLineChart(),
+                _buildLineChartReceitas(),
+                // Gráfico Despesas por Mês
+                const SizedBox(height: 24),
+                const Text(
+                  'Despesas por Mês',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 12),
+                _buildLineChartDespesas(),
               ],
             ),
           )),
@@ -370,7 +408,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildLineChart() {
+  Widget _buildLineChartReceitas() {
     final lineColor = bluePalette[0];
 
     if (receitaSpots.isEmpty) {
@@ -420,6 +458,85 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     final index = value.toInt();
                     if (index >= 0 && index < receitaLabels.length) {
                       return Text(receitaLabels[index],
+                          style: const TextStyle(fontSize: 10));
+                    }
+                    return const Text('');
+                  },
+                ),
+              ),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 60,
+                  interval: intervalY,
+                  getTitlesWidget: (value, _) {
+                    return Text(
+                      value.toInt().toString(),
+                      style: const TextStyle(fontSize: 10),
+                    );
+                  },
+                ),
+              ),
+              topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              rightTitles:
+                  AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            ),
+            borderData: FlBorderData(show: false),
+            gridData: FlGridData(show: true),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLineChartDespesas() {
+    final lineColor = bluePalette[0];
+
+    if (despesaSpots.isEmpty) {
+      return const SizedBox(
+        height: 220,
+        child: Center(child: Text('Nenhum dado disponível')),
+      );
+    }
+
+    final double maxY =
+        despesaSpots.map((e) => e.y).reduce((a, b) => a > b ? a : b);
+
+    final double intervalY = (maxY / 5).ceilToDouble();
+
+    return SizedBox(
+      height: 220,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12.0),
+        child: LineChart(
+          LineChartData(
+            clipData: FlClipData.none(),
+            minX: 0,
+            maxX: despesaSpots.length > 1 ? despesaSpots.length - 1 : 0,
+            minY: 0,
+            maxY: (maxY + intervalY),
+            lineBarsData: [
+              LineChartBarData(
+                spots: despesaSpots,
+                isCurved: true,
+                color: lineColor,
+                dotData: FlDotData(show: true),
+                belowBarData: BarAreaData(
+                  show: true,
+                  color: lineColor.withOpacity(0.2),
+                ),
+              ),
+            ],
+            titlesData: FlTitlesData(
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  reservedSize: 32,
+                  showTitles: true,
+                  interval: 1,
+                  getTitlesWidget: (value, _) {
+                    final index = value.toInt();
+                    if (index >= 0 && index < despesaLabels.length) {
+                      return Text(despesaLabels[index],
                           style: const TextStyle(fontSize: 10));
                     }
                     return const Text('');

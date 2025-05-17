@@ -5,6 +5,7 @@ from app.db import SessionLocal
 from app.models.despesas import Despesas
 from app.models.categoria import Categoria
 from app.models.receitas import Receitas
+from app.models.despesas import Despesas
 from app.schemas import categoria
 from collections import defaultdict
 from dateutil.relativedelta import relativedelta
@@ -87,6 +88,40 @@ def total_receitas_periodo(
 
         for r in receitas:
             data_base = r.data_recebimento.replace(day=1)
+            fim = r.fim_recorrencia.replace(day=1) if r.fim_recorrencia else None
+
+            if not r.recorrencia and data_base == data_mes:
+                total_mes += r.valor
+            elif r.recorrencia and (data_mes >= data_base and (fim is None or data_mes <= fim)):
+                total_mes += r.valor
+
+        resultados.append({
+            "mes": data_mes.month,
+            "ano": data_mes.year,
+            "valor": total_mes
+        })
+
+    resultados.sort(key=lambda x: (x["ano"], x["mes"]))
+    return resultados
+
+@router.get("/total-despesas-periodo")
+def total_despesas_periodo(
+    id_login: str = Query(...),
+    mes: int = Query(..., ge=1, le=12),
+    ano: int = Query(..., ge=1900),
+    db: Session = Depends(get_db)
+):
+    data_referencia = date(ano, mes, 1)
+    despesas = db.query(Despesas).filter(Despesas.id_login == id_login).all()
+
+    resultados = []
+
+    for i in range(-3, 3):
+        data_mes = data_referencia + relativedelta(months=i)
+        total_mes = 0.0
+
+        for r in despesas:
+            data_base = r.data_vencimento.replace(day=1)
             fim = r.fim_recorrencia.replace(day=1) if r.fim_recorrencia else None
 
             if not r.recorrencia and data_base == data_mes:
