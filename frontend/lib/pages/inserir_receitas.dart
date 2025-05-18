@@ -71,7 +71,7 @@ class _InserirReceitaPageState extends State<InserirReceitaPage> {
     final idLogin = prefs.getString('userId');
 
     if (token == null || idLogin == null) {
-      _showSnackbar('Usuário não autenticado ou ID não encontrado.');
+      _showSnackbar('Usuário não autenticado.');
       return;
     }
 

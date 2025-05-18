@@ -1,4 +1,10 @@
 import 'dart:convert';
+import 'package:flutter/services.dart';
+import 'package:flutter_multi_formatter/formatters/money_input_enums.dart';
+import 'package:flutter_multi_formatter/formatters/money_input_formatter.dart';
+import 'package:frontend/pages/config_page.dart';
+import 'package:intl/intl.dart';
+
 import '../utils/environment.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -17,26 +23,32 @@ class _EditReceitaPageState extends State<EditReceitaPage> {
   final _formKey = GlobalKey<FormState>();
   final _descricaoController = TextEditingController();
   final _valorController = TextEditingController();
-  int? _receitaId;
-  int _currentStep = 0;
+  final _dataRecebimentoController = TextEditingController();
+  final _fimRecorrenciaController = TextEditingController();
   DateTime? _selectedDate;
   DateTime? _fimRecorrencia;
   bool _recorrente = false;
+  int? _receitaId;
+  int _currentStep = 0;
+
+  DateTime _parseDate(String input) {
+    return DateFormat('dd/MM/yyyy').parseStrict(input);
+  }
 
   void _showSnackbar(String message) {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void _onStepContinue() {
-    atualizarReceita();
-  }
+  // void _onStepContinue() {
+  //   atualizarReceita();
+  // }
 
-  void _onStepCancel() {
-    if (_currentStep > 0) {
-      setState(() => _currentStep--);
-    }
-  }
+  // void _onStepCancel() {
+  //   if (_currentStep > 0) {
+  //     setState(() => _currentStep--);
+  //   }
+  // }
 
   @override
   void initState() {
@@ -97,10 +109,22 @@ class _EditReceitaPageState extends State<EditReceitaPage> {
   }
 
   Future<void> atualizarReceita() async {
-    if (!_formKey.currentState!.validate() ||
+    if (!_formKey.currentState!
+            .validate() /*||
         _selectedDate == null ||
-        _receitaId == null) {
+        _receitaId == null*/
+        ) {
       _showSnackbar("Preencha todos os campos corretamente.");
+      return;
+    }
+
+    try {
+      _selectedDate = _parseDate(_dataRecebimentoController.text);
+      if (_recorrente && _fimRecorrenciaController.text.isNotEmpty) {
+        _fimRecorrencia = _parseDate(_fimRecorrenciaController.text);
+      }
+    } catch (_) {
+      _showSnackbar("Datas inválidas.");
       return;
     }
 
@@ -118,11 +142,20 @@ class _EditReceitaPageState extends State<EditReceitaPage> {
     final requestBody = {
       'id_login': idLogin,
       'descricao': _descricaoController.text,
-      'valor': double.tryParse(_valorController.text) ?? 0.0,
+      'valor': double.tryParse(
+            _valorController.text
+                .replaceAll(RegExp(r'[^\d,]'), '')
+                .replaceAll(',', '.'),
+          ) ??
+          0.0,
       'data_recebimento': _selectedDate!.toIso8601String().split('T')[0],
       'recorrencia': _recorrente,
-      'fim_recorrencia': _fimRecorrencia?.toIso8601String().split('T')[0],
     };
+
+    if (_fimRecorrencia != null) {
+      requestBody['fim_recorrencia'] =
+          _fimRecorrencia!.toIso8601String().split('T')[0];
+    }
 
     try {
       final response = await http.put(
@@ -132,129 +165,280 @@ class _EditReceitaPageState extends State<EditReceitaPage> {
       );
 
       if (response.statusCode == 200) {
-        _showSnackbar('Receita atualizada com sucesso.');
+        final responseData = json.decode(response.body);
+        _showSnackbar(responseData['mensagem']);
+
         Future.delayed(const Duration(seconds: 1), () {
-          if (mounted) Navigator.pop(context, true);
+          if (mounted) Navigator.pop(context);
         });
       } else {
-        _showSnackbar('Erro ao atualizar: ${response.body}');
+        _showSnackbar('Erro ao editar: ${response.body}');
       }
     } catch (e) {
-      _showSnackbar('Erro ao atualizar: $e');
+      _showSnackbar('Erro ao editar: $e');
     }
   }
 
+  Future<void> _selectDate(TextEditingController controller) async {
+    final currentDate = DateTime.now();
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: currentDate,
+      firstDate: DateTime(1900),
+      lastDate: DateTime(2100),
+    );
+    if (pickedDate != null) {
+      controller.text = DateFormat('dd/MM/yyyy').format(pickedDate);
+    }
+  }
+
+  Widget _buildRecorrenciaSwitch() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: SwitchListTile(
+              title: Row(
+                children: const [
+                  Icon(Icons.repeat, color: Colors.blue),
+                  SizedBox(width: 8),
+                  Text('Receita Recorrente'),
+                ],
+              ),
+              value: _recorrente,
+              onChanged: (value) {
+                setState(() {
+                  _recorrente = value;
+                });
+              },
+              activeColor: Colors.blue,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+          if (_recorrente) ...[
+            const SizedBox(height: 12),
+            _buildDateField(
+                'Fim da Recorrência (opcional)', _fimRecorrenciaController,
+                obrigatorio: false),
+          ],
+          const SizedBox(height: 12),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTextField(String label, TextEditingController controller,
-      {TextInputType keyboardType = TextInputType.text}) {
+      {TextInputType keyboardType = TextInputType.text,
+      List<TextInputFormatter>? inputFormatters}) {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
       validator: (value) =>
           value == null || value.isEmpty ? 'Campo obrigatório' : null,
-      decoration: InputDecoration(labelText: label),
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        filled: true,
+        fillColor: Colors.grey[100],
+      ),
     );
   }
 
-  Widget _buildCheckbox(String label, bool value) {
-    return CheckboxListTile(
-      title: Text(label),
-      value: value,
-      onChanged: (newValue) => setState(() => _recorrente = newValue ?? false),
-    );
-  }
+  // Widget _buildTextField(String label, TextEditingController controller,
+  //     {TextInputType keyboardType = TextInputType.text}) {
+  //   return TextFormField(
+  //     controller: controller,
+  //     keyboardType: keyboardType,
+  //     inputFormatters: inputFormatters,
+  //     validator: (value) =>
+  //         value == null || value.isEmpty ? 'Campo obrigatório' : null,
+  //     decoration: InputDecoration(
+  //       labelText: label,
+  //       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+  //       filled: true,
+  //       fillColor: Colors.grey[100],
+  //     ),
+  //   );
+  // }
 
-  Widget _buildFimRecorrenciaPicker(String label) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label),
-        const SizedBox(height: 8),
-        GestureDetector(
-          onTap: () async {
-            final pickedDate = await showDatePicker(
-              context: context,
-              initialDate: DateTime.now(),
-              firstDate: DateTime(1900),
-              lastDate: DateTime(2100),
-            );
-            if (pickedDate != null) {
-              setState(() => _fimRecorrencia = pickedDate);
-            }
-          },
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.blue),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(_fimRecorrencia == null
-                ? 'Selecione a data (opcional)'
-                : _fimRecorrencia!.toIso8601String().split('T')[0]),
-          ),
+  Widget _buildDateField(String label, TextEditingController controller,
+      {bool obrigatorio = true}) {
+    return TextFormField(
+      controller: controller,
+      readOnly: false,
+      inputFormatters: [DateInputFormatter()],
+      keyboardType: TextInputType.number,
+      decoration: InputDecoration(
+        labelText: label,
+        suffixIcon: IconButton(
+          icon: const Icon(Icons.calendar_today),
+          onPressed: () => _selectDate(controller),
         ),
-      ],
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        filled: true,
+        fillColor: Colors.grey[100],
+      ),
+      validator: (value) {
+        if (obrigatorio && (value == null || value.isEmpty)) {
+          return 'Campo obrigatório';
+        }
+        if (value != null && value.isNotEmpty) {
+          try {
+            _parseDate(value);
+          } catch (_) {
+            return 'Data inválida (ex: 10/04/2025)';
+          }
+        }
+        return null;
+      },
     );
   }
 
-  Widget _buildDatePicker(String label) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label),
-        const SizedBox(height: 8),
-        GestureDetector(
-          onTap: () async {
-            final pickedDate = await showDatePicker(
-              context: context,
-              initialDate: DateTime.now(),
-              firstDate: DateTime(1900),
-              lastDate: DateTime(2100),
-            );
-            if (pickedDate != null) {
-              setState(() => _selectedDate = pickedDate);
-            }
-          },
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.blue),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(_selectedDate == null
-                ? 'Selecione a data'
-                : _selectedDate!.toIso8601String().split('T')[0]),
-          ),
-        ),
-      ],
-    );
-  }
+  // Widget _buildCheckbox(String label, bool value) {
+  //   return CheckboxListTile(
+  //     title: Text(label),
+  //     value: value,
+  //     onChanged: (newValue) => setState(() => _recorrente = newValue ?? false),
+  //   );
+  // }
+
+  // Widget _buildFimRecorrenciaPicker(String label) {
+  //   return Column(
+  //     crossAxisAlignment: CrossAxisAlignment.start,
+  //     children: [
+  //       Text(label),
+  //       const SizedBox(height: 8),
+  //       GestureDetector(
+  //         onTap: () async {
+  //           final pickedDate = await showDatePicker(
+  //             context: context,
+  //             initialDate: DateTime.now(),
+  //             firstDate: DateTime(1900),
+  //             lastDate: DateTime(2100),
+  //           );
+  //           if (pickedDate != null) {
+  //             setState(() => _fimRecorrencia = pickedDate);
+  //           }
+  //         },
+  //         child: Container(
+  //           padding: const EdgeInsets.all(12),
+  //           decoration: BoxDecoration(
+  //             border: Border.all(color: Colors.blue),
+  //             borderRadius: BorderRadius.circular(8),
+  //           ),
+  //           child: Text(_fimRecorrencia == null
+  //               ? 'Selecione a data (opcional)'
+  //               : _fimRecorrencia!.toIso8601String().split('T')[0]),
+  //         ),
+  //       ),
+  //     ],
+  //   );
+  // }
+
+  // Widget _buildDatePicker(String label) {
+  //   return Column(
+  //     crossAxisAlignment: CrossAxisAlignment.start,
+  //     children: [
+  //       Text(label),
+  //       const SizedBox(height: 8),
+  //       GestureDetector(
+  //         onTap: () async {
+  //           final pickedDate = await showDatePicker(
+  //             context: context,
+  //             initialDate: DateTime.now(),
+  //             firstDate: DateTime(1900),
+  //             lastDate: DateTime(2100),
+  //           );
+  //           if (pickedDate != null) {
+  //             setState(() => _selectedDate = pickedDate);
+  //           }
+  //         },
+  //         child: Container(
+  //           padding: const EdgeInsets.all(12),
+  //           decoration: BoxDecoration(
+  //             border: Border.all(color: Colors.blue),
+  //             borderRadius: BorderRadius.circular(8),
+  //           ),
+  //           child: Text(_selectedDate == null
+  //               ? 'Selecione a data'
+  //               : _selectedDate!.toIso8601String().split('T')[0]),
+  //         ),
+  //       ),
+  //     ],
+  //   );
+  // }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Editar Receita')),
-      body: Form(
-        key: _formKey,
-        child: Stepper(
-          currentStep: _currentStep,
-          onStepContinue: _onStepContinue,
-          onStepCancel: _onStepCancel,
-          steps: [
-            Step(
-              title: const Text('Detalhes da Receita'),
-              content: Column(
-                children: [
-                  _buildTextField('Descrição', _descricaoController),
-                  _buildTextField('Valor', _valorController,
-                      keyboardType: TextInputType.number),
-                  _buildDatePicker('Data de Recebimento'),
-                  _buildCheckbox('Recorrente', _recorrente),
-                  if (_recorrente)
-                    _buildFimRecorrenciaPicker('Fim da Recorrência'),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            children: [
+              _buildTextField('Descrição *', _descricaoController),
+              const SizedBox(height: 12),
+              _buildDateField(
+                  'Data de Recebimento *', _dataRecebimentoController),
+              const SizedBox(height: 12),
+              _buildTextField(
+                'Valor *',
+                _valorController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  MoneyInputFormatter(
+                    thousandSeparator: ThousandSeparator.Period,
+                    mantissaLength: 2,
+                    trailingSymbol: '',
+                    leadingSymbol: 'R\$ ',
+                  )
                 ],
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              _buildRecorrenciaSwitch(),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
+                      backgroundColor: Colors.blue,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: atualizarReceita,
+                    icon: const Icon(Icons.save),
+                    label: const Text('Salvar'),
+                  ),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
+                      backgroundColor: Colors.grey,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.cancel),
+                    label: const Text('Cancelar'),
+                  ),
+                ],
+              )
+            ],
+          ),
         ),
       ),
     );
