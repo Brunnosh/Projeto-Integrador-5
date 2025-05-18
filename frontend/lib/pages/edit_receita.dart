@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../utils/environment.dart';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 String _receitasUrl = '';
@@ -14,15 +14,29 @@ class EditReceitaPage extends StatefulWidget {
 }
 
 class _EditReceitaPageState extends State<EditReceitaPage> {
-  int _currentStep = 0;
   final _formKey = GlobalKey<FormState>();
   final _descricaoController = TextEditingController();
   final _valorController = TextEditingController();
+  int? _receitaId;
+  int _currentStep = 0;
   DateTime? _selectedDate;
   DateTime? _fimRecorrencia;
   bool _recorrente = false;
 
-  int? _receitaId;
+  void _showSnackbar(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _onStepContinue() {
+    atualizarReceita();
+  }
+
+  void _onStepCancel() {
+    if (_currentStep > 0) {
+      setState(() => _currentStep--);
+    }
+  }
 
   @override
   void initState() {
@@ -130,52 +144,6 @@ class _EditReceitaPageState extends State<EditReceitaPage> {
     }
   }
 
-  void _showSnackbar(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  void _onStepContinue() {
-    atualizarReceita();
-  }
-
-  void _onStepCancel() {
-    if (_currentStep > 0) {
-      setState(() => _currentStep--);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Editar Receita')),
-      body: Form(
-        key: _formKey,
-        child: Stepper(
-          currentStep: _currentStep,
-          onStepContinue: _onStepContinue,
-          onStepCancel: _onStepCancel,
-          steps: [
-            Step(
-              title: const Text('Detalhes da Receita'),
-              content: Column(
-                children: [
-                  _buildTextField('Descrição', _descricaoController),
-                  _buildTextField('Valor', _valorController,
-                      keyboardType: TextInputType.number),
-                  _buildDatePicker('Data de Recebimento'),
-                  _buildCheckbox('Recorrente', _recorrente),
-                  if (_recorrente)
-                    _buildFimRecorrenciaPicker('Fim da Recorrência'),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildTextField(String label, TextEditingController controller,
       {TextInputType keyboardType = TextInputType.text}) {
     return TextFormField(
@@ -258,6 +226,37 @@ class _EditReceitaPageState extends State<EditReceitaPage> {
           ),
         ),
       ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Editar Receita')),
+      body: Form(
+        key: _formKey,
+        child: Stepper(
+          currentStep: _currentStep,
+          onStepContinue: _onStepContinue,
+          onStepCancel: _onStepCancel,
+          steps: [
+            Step(
+              title: const Text('Detalhes da Receita'),
+              content: Column(
+                children: [
+                  _buildTextField('Descrição', _descricaoController),
+                  _buildTextField('Valor', _valorController,
+                      keyboardType: TextInputType.number),
+                  _buildDatePicker('Data de Recebimento'),
+                  _buildCheckbox('Recorrente', _recorrente),
+                  if (_recorrente)
+                    _buildFimRecorrenciaPicker('Fim da Recorrência'),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

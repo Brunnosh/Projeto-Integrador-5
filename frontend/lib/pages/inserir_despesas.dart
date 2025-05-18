@@ -1,10 +1,10 @@
+import 'dart:convert';
+import 'package:intl/intl.dart';
+import '../utils/environment.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
-import '../utils/environment.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:intl/intl.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_multi_formatter/flutter_multi_formatter.dart';
 
 class InserirDespesaPage extends StatefulWidget {
@@ -23,11 +23,19 @@ class _InserirDespesaPageState extends State<InserirDespesaPage> {
   bool _recorrente = false;
   DateTime? _selectedDate;
   DateTime? _fimRecorrencia;
-
   List<Map<String, dynamic>> _categorias = [];
   int? _idCategoriaSelecionada;
   String _despesasUrl = '';
   String _categoriasUrl = '';
+
+  DateTime _parseDate(String input) {
+    return DateFormat('dd/MM/yyyy').parseStrict(input);
+  }
+
+  void _showSnackbar(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
 
   @override
   void initState() {
@@ -126,15 +134,6 @@ class _InserirDespesaPageState extends State<InserirDespesaPage> {
     } catch (e) {
       _showSnackbar('Erro ao inserir: $e');
     }
-  }
-
-  DateTime _parseDate(String input) {
-    return DateFormat('dd/MM/yyyy').parseStrict(input);
-  }
-
-  void _showSnackbar(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _selectDate(TextEditingController controller) async {

@@ -1,9 +1,9 @@
-import 'dart:convert';
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ReceitasDetalhadasPage extends StatefulWidget {
   const ReceitasDetalhadasPage({super.key});
@@ -98,36 +98,6 @@ class _ReceitasDetalhadasPageState extends State<ReceitasDetalhadasPage> {
     }
   }
 
-  Widget _buildDropdown<T>({
-    required String label,
-    required String value,
-    required List<T> items,
-    required void Function(T?) onChanged,
-    required String Function(T) itemBuilder,
-  }) {
-    return Expanded(
-      child: DropdownButtonFormField<T>(
-        value: value as T?,
-        items: items
-            .map((item) => DropdownMenuItem<T>(
-                  value: item,
-                  child: Text(itemBuilder(item)),
-                ))
-            .toList(),
-        onChanged: onChanged,
-        isExpanded: true,
-        decoration: InputDecoration(
-          labelText: label,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        ),
-      ),
-    );
-  }
-
   Future<void> _deletarReceita(int idreceita) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access_token');
@@ -171,6 +141,36 @@ class _ReceitasDetalhadasPageState extends State<ReceitasDetalhadasPage> {
         const SnackBar(content: Text('Erro de conexão ao excluir receita')),
       );
     }
+  }
+
+  Widget _buildDropdown<T>({
+    required String label,
+    required String value,
+    required List<T> items,
+    required void Function(T?) onChanged,
+    required String Function(T) itemBuilder,
+  }) {
+    return Expanded(
+      child: DropdownButtonFormField<T>(
+        value: value as T?,
+        items: items
+            .map((item) => DropdownMenuItem<T>(
+                  value: item,
+                  child: Text(itemBuilder(item)),
+                ))
+            .toList(),
+        onChanged: onChanged,
+        isExpanded: true,
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        ),
+      ),
+    );
   }
 
   Widget _buildReceitaTile(Map<String, dynamic> receita) {

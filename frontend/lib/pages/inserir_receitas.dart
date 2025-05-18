@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
 import '../utils/environment.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_multi_formatter/flutter_multi_formatter.dart';
 
 String _receitasUrl = '';
@@ -25,6 +25,15 @@ class _InserirReceitaPageState extends State<InserirReceitaPage> {
   DateTime? _selectedDate;
   DateTime? _fimRecorrencia;
   bool _recorrente = false;
+
+  DateTime _parseDate(String input) {
+    return DateFormat('dd/MM/yyyy').parseStrict(input);
+  }
+
+  void _showSnackbar(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
 
   @override
   void initState() {
@@ -106,15 +115,6 @@ class _InserirReceitaPageState extends State<InserirReceitaPage> {
     }
   }
 
-  DateTime _parseDate(String input) {
-    return DateFormat('dd/MM/yyyy').parseStrict(input);
-  }
-
-  void _showSnackbar(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
-  }
-
   Future<void> _selectDate(TextEditingController controller) async {
     final currentDate = DateTime.now();
     final pickedDate = await showDatePicker(
@@ -168,6 +168,57 @@ class _InserirReceitaPageState extends State<InserirReceitaPage> {
           const SizedBox(height: 12),
         ],
       ),
+    );
+  }
+
+  Widget _buildTextField(String label, TextEditingController controller,
+      {TextInputType keyboardType = TextInputType.text,
+      List<TextInputFormatter>? inputFormatters}) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
+      validator: (value) =>
+          value == null || value.isEmpty ? 'Campo obrigatório' : null,
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        filled: true,
+        fillColor: Colors.grey[100],
+      ),
+    );
+  }
+
+  Widget _buildDateField(String label, TextEditingController controller,
+      {bool obrigatorio = true}) {
+    return TextFormField(
+      controller: controller,
+      readOnly: false,
+      inputFormatters: [DateInputFormatter()],
+      keyboardType: TextInputType.number,
+      decoration: InputDecoration(
+        labelText: label,
+        suffixIcon: IconButton(
+          icon: const Icon(Icons.calendar_today),
+          onPressed: () => _selectDate(controller),
+        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        filled: true,
+        fillColor: Colors.grey[100],
+      ),
+      validator: (value) {
+        if (obrigatorio && (value == null || value.isEmpty)) {
+          return 'Campo obrigatório';
+        }
+        if (value != null && value.isNotEmpty) {
+          try {
+            _parseDate(value);
+          } catch (_) {
+            return 'Data inválida (ex: 10/04/2025)';
+          }
+        }
+        return null;
+      },
     );
   }
 
@@ -235,65 +286,6 @@ class _InserirReceitaPageState extends State<InserirReceitaPage> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildTextField(String label, TextEditingController controller,
-      {TextInputType keyboardType = TextInputType.text,
-      List<TextInputFormatter>? inputFormatters}) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: keyboardType,
-      inputFormatters: inputFormatters,
-      validator: (value) =>
-          value == null || value.isEmpty ? 'Campo obrigatório' : null,
-      decoration: InputDecoration(
-        labelText: label,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        filled: true,
-        fillColor: Colors.grey[100],
-      ),
-    );
-  }
-
-  Widget _buildDateField(String label, TextEditingController controller,
-      {bool obrigatorio = true}) {
-    return TextFormField(
-      controller: controller,
-      readOnly: false,
-      inputFormatters: [DateInputFormatter()],
-      keyboardType: TextInputType.number,
-      decoration: InputDecoration(
-        labelText: label,
-        suffixIcon: IconButton(
-          icon: const Icon(Icons.calendar_today),
-          onPressed: () => _selectDate(controller),
-        ),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        filled: true,
-        fillColor: Colors.grey[100],
-      ),
-      validator: (value) {
-        if (obrigatorio && (value == null || value.isEmpty)) {
-          return 'Campo obrigatório';
-        }
-        if (value != null && value.isNotEmpty) {
-          try {
-            _parseDate(value);
-          } catch (_) {
-            return 'Data inválida (ex: 10/04/2025)';
-          }
-        }
-        return null;
-      },
-    );
-  }
-
-  Widget _buildCheckbox(String label, bool value) {
-    return CheckboxListTile(
-      title: Text(label),
-      value: value,
-      onChanged: (newValue) => setState(() => _recorrente = newValue ?? false),
     );
   }
 }

@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'forgot_password_page.dart';
 import '../utils/environment.dart';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 String _loginUrl = '';
@@ -17,6 +17,14 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+
+  void _login() {
+    if (_formKey.currentState!.validate()) {
+      final email = _emailController.text;
+      final senha = _passwordController.text;
+      _fazerLogin(email, senha);
+    }
+  }
 
   @override
   void initState() {
@@ -53,14 +61,6 @@ class _LoginPageState extends State<LoginPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('E-mail ou senha inválidos')),
       );
-    }
-  }
-
-  void _login() {
-    if (_formKey.currentState!.validate()) {
-      final email = _emailController.text;
-      final senha = _passwordController.text;
-      _fazerLogin(email, senha);
     }
   }
 

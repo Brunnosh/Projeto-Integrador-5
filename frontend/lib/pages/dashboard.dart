@@ -1,10 +1,9 @@
 import 'dart:io';
-
-import 'package:device_info_plus/device_info_plus.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:device_info_plus/device_info_plus.dart';
 
 class DashboardScreen extends StatefulWidget {
   final int idLogin;
@@ -39,6 +38,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     Color(0xFF219653), // verde escuro
     Color(0xFFEB5757) // vermelho suave
   ];
+
   final Map<String, int> monthToNumber = {
     'Janeiro': 1,
     'Fevereiro': 2,
@@ -54,19 +54,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     'Dezembro': 12,
   };
 
-  @override
-  void initState() {
-    super.initState();
-    final currentYear = DateTime.now().year;
-    final currentMonth = DateTime.now().month;
-    years = List.generate(11, (index) => (currentYear - 5 + index).toString());
-    selectedYear = currentYear.toString();
-    selectedMonth = monthToNumber.entries
-        .firstWhere((entry) => entry.value == currentMonth)
-        .key;
-    _setupApi();
-  }
-
   void _setupApi() async {
     final isEmulator = await isRunningOnEmulator();
     final baseUrl =
@@ -81,6 +68,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _loadDespesasPorCategoria();
     _loadReceitasPorPeriodo();
     _loadDespesasPorPeriodo();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final currentYear = DateTime.now().year;
+    final currentMonth = DateTime.now().month;
+    years = List.generate(11, (index) => (currentYear - 5 + index).toString());
+    selectedYear = currentYear.toString();
+    selectedMonth = monthToNumber.entries
+        .firstWhere((entry) => entry.value == currentMonth)
+        .key;
+    _setupApi();
   }
 
   Future<bool> isRunningOnEmulator() async {
@@ -234,97 +234,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
       });
     }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dashboard'),
-        centerTitle: true,
-      ),
-      body: Padding(
-          padding: const EdgeInsets.all(16),
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                Card(
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  elevation: 2,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Row(
-                      children: [
-                        _buildDropdown<String>(
-                          label: 'Mês',
-                          value: selectedMonth,
-                          items: monthToNumber.keys.toList(),
-                          onChanged: (value) {
-                            setState(() => selectedMonth = value!);
-                            _setupApi();
-                          },
-                          itemBuilder: (item) => item,
-                        ),
-                        const SizedBox(width: 12),
-                        _buildDropdown<String>(
-                          label: 'Ano',
-                          value: selectedYear,
-                          items: years,
-                          onChanged: (value) {
-                            setState(() => selectedYear = value!);
-                            _setupApi();
-                          },
-                          itemBuilder: (item) => item,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                // Gráfico Despesas por Dia de Vencimento
-                const Text(
-                  'Despesas por Dia de Vencimento',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                _buildBarChart(),
-                // Gráfico Despesas por Categoria
-                const SizedBox(height: 24),
-                const Text(
-                  'Despesas por Categoria',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 12),
-                _buildPieChart(),
-                // Gráfico Receitas por Mês
-                const SizedBox(height: 24),
-                const Text(
-                  'Receitas por Mês',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 12),
-                _buildLineChartReceitas(),
-                // Gráfico Despesas por Mês
-                const SizedBox(height: 24),
-                const Text(
-                  'Despesas por Mês',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 12),
-                _buildLineChartDespesas(),
-                // Gráfico Receitas x Despesas
-                const SizedBox(height: 24),
-                const Text(
-                  'Receitas x Despesas',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 12),
-                _buildComparativoReceitaDespesaChart(),
-              ],
-            ),
-          )),
-    );
   }
 
   Widget _buildBarChart() {
@@ -673,6 +582,97 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Dashboard'),
+        centerTitle: true,
+      ),
+      body: Padding(
+          padding: const EdgeInsets.all(16),
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                Card(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  elevation: 2,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        _buildDropdown<String>(
+                          label: 'Mês',
+                          value: selectedMonth,
+                          items: monthToNumber.keys.toList(),
+                          onChanged: (value) {
+                            setState(() => selectedMonth = value!);
+                            _setupApi();
+                          },
+                          itemBuilder: (item) => item,
+                        ),
+                        const SizedBox(width: 12),
+                        _buildDropdown<String>(
+                          label: 'Ano',
+                          value: selectedYear,
+                          items: years,
+                          onChanged: (value) {
+                            setState(() => selectedYear = value!);
+                            _setupApi();
+                          },
+                          itemBuilder: (item) => item,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // Gráfico Despesas por Dia de Vencimento
+                const Text(
+                  'Despesas por Dia de Vencimento',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                _buildBarChart(),
+                // Gráfico Despesas por Categoria
+                const SizedBox(height: 24),
+                const Text(
+                  'Despesas por Categoria',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                _buildPieChart(),
+                // Gráfico Receitas por Mês
+                const SizedBox(height: 24),
+                const Text(
+                  'Receitas por Mês',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 12),
+                _buildLineChartReceitas(),
+                // Gráfico Despesas por Mês
+                const SizedBox(height: 24),
+                const Text(
+                  'Despesas por Mês',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 12),
+                _buildLineChartDespesas(),
+                // Gráfico Receitas x Despesas
+                const SizedBox(height: 24),
+                const Text(
+                  'Receitas x Despesas',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 12),
+                _buildComparativoReceitaDespesaChart(),
+              ],
+            ),
+          )),
     );
   }
 }

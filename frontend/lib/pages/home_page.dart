@@ -1,11 +1,11 @@
-import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:device_info_plus/device_info_plus.dart';
+import 'dart:convert';
 import 'dashboard.dart';
 import 'config_page.dart';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -41,6 +41,35 @@ class _HomePageState extends State<HomePage> {
     'Novembro': 11,
     'Dezembro': 12,
   };
+
+  void _showAddOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.add_circle_outline),
+            title: const Text('Adicionar Receita'),
+            onTap: () async {
+              Navigator.pop(context);
+              await Navigator.pushNamed(context, '/inserir-receitas');
+              _loadData();
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.remove_circle_outline),
+            title: const Text('Adicionar Despesa'),
+            onTap: () async {
+              Navigator.pop(context);
+              await Navigator.pushNamed(context, '/inserir-despesas');
+              _loadData();
+            },
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -188,35 +217,6 @@ class _HomePageState extends State<HomePage> {
         saldo = 0.0;
       });
     }
-  }
-
-  void _showAddOptions() {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            leading: const Icon(Icons.add_circle_outline),
-            title: const Text('Adicionar Receita'),
-            onTap: () async {
-              Navigator.pop(context);
-              await Navigator.pushNamed(context, '/inserir-receitas');
-              _loadData();
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.remove_circle_outline),
-            title: const Text('Adicionar Despesa'),
-            onTap: () async {
-              Navigator.pop(context);
-              await Navigator.pushNamed(context, '/inserir-despesas');
-              _loadData();
-            },
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildCard(

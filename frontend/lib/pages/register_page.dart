@@ -1,11 +1,11 @@
 import 'dart:io';
-import 'package:device_info_plus/device_info_plus.dart';
+import 'dart:convert';
+import 'package:intl/intl.dart';
+import '../utils/environment.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
-import '../utils/environment.dart';
-import 'package:intl/intl.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -19,16 +19,88 @@ class _RegisterPageState extends State<RegisterPage> {
   final _dateController = TextEditingController();
   final _formKeyStep1 = GlobalKey<FormState>();
   final _formKeyStep2 = GlobalKey<FormState>();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  final _cepController = TextEditingController();
+  final _neighborhoodController = TextEditingController();
+  final _streetController = TextEditingController();
+  final _numberController = TextEditingController();
+  final _complementController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
   Map<int, String> estadosMap = {};
-
+  String _selectedState = 'Selecione';
   String _cadastroUrl = '';
   String _estadosUrl = '';
+  int _currentStep = 0;
+  DateTime? _selectedDate;
 
   String? _validateRequired(String? value) {
     if (value == null || value.isEmpty) {
       return 'Campo obrigatório';
     }
     return null;
+  }
+
+  // Validações simples para os campos
+  String? _validateEmail(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'E-mail é obrigatório';
+    }
+    final regex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+    if (!regex.hasMatch(value)) {
+      return 'E-mail inválido';
+    }
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Senha é obrigatória';
+    }
+
+    if (_confirmPasswordController.value != _passwordController.value) {
+      return 'As senhas não coincidem';
+    }
+
+    final isStrongPassword = RegExp(
+        r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$');
+
+    if (!isStrongPassword.hasMatch(value)) {
+      return 'A senha deve ter pelo menos 8 caracteres, incluindo letra maiúscula, minúscula, número e caractere especial';
+    }
+
+    return null;
+  }
+
+  void _showSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  void _onStepContinue() {
+    if (_currentStep == 0) {
+      if (_formKeyStep1.currentState!.validate()) {
+        setState(() => _currentStep++);
+      } else {
+        _showSnackbar('Preencha todos os campos obrigatórios.');
+      }
+    } else if (_currentStep == 1) {
+      if (_formKeyStep2.currentState!.validate()) {
+        registerUser();
+      } else {
+        _showSnackbar('Preencha todos os campos obrigatórios.');
+      }
+    }
+  }
+
+  void _onStepCancel() {
+    if (_currentStep > 0) {
+      setState(() => _currentStep--);
+    }
   }
 
   @override
@@ -57,22 +129,6 @@ class _RegisterPageState extends State<RegisterPage> {
     _estadosUrl = '$baseUrl/estados';
     await _carregarEstados();
   }
-
-  int _currentStep = 0;
-  final _formKey = GlobalKey<FormState>();
-
-  final _firstNameController = TextEditingController();
-  final _lastNameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-  final _cepController = TextEditingController();
-  final _neighborhoodController = TextEditingController();
-  final _streetController = TextEditingController();
-  final _numberController = TextEditingController();
-  final _complementController = TextEditingController();
-  String _selectedState = 'Selecione';
-  DateTime? _selectedDate;
 
   Future<void> _carregarEstados() async {
     try {
@@ -147,32 +203,96 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
-  void _showSnackbar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+  Widget _buildTextField(String label, TextEditingController controller,
+      {bool obscureText = false, String? Function(String?)? validator}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: TextFormField(
+        controller: controller,
+        obscureText: obscureText,
+        validator: validator,
+        decoration: InputDecoration(
+          labelText: label,
+          errorMaxLines: 3,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.blue, width: 2),
+          ),
+        ),
+      ),
     );
   }
 
-  void _onStepContinue() {
-    if (_currentStep == 0) {
-      if (_formKeyStep1.currentState!.validate()) {
-        setState(() => _currentStep++);
-      } else {
-        _showSnackbar('Preencha todos os campos obrigatórios.');
-      }
-    } else if (_currentStep == 1) {
-      if (_formKeyStep2.currentState!.validate()) {
-        registerUser();
-      } else {
-        _showSnackbar('Preencha todos os campos obrigatórios.');
-      }
-    }
+  Widget _buildDropdown(String label, List<String> items, String value) {
+    final dropdownItems = ['Selecione', ...items];
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: DropdownButtonFormField<String>(
+        value: value,
+        onChanged: (newValue) => setState(() => _selectedState = newValue!),
+        items: items
+            .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+            .toList(),
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        validator: (value) {
+          if (value == null || value == 'Selecione') {
+            return 'Selecione um estado válido';
+          }
+          return null;
+        },
+      ),
+    );
   }
 
-  void _onStepCancel() {
-    if (_currentStep > 0) {
-      setState(() => _currentStep--);
-    }
+  Widget _buildDatePicker(String label) {
+    return TextFormField(
+      controller: _dateController,
+      keyboardType: TextInputType.number,
+      inputFormatters: [DateInputFormatter()],
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        suffixIcon: IconButton(
+          icon: const Icon(Icons.calendar_today),
+          onPressed: () async {
+            final pickedDate = await showDatePicker(
+              context: context,
+              initialDate: _selectedDate ?? DateTime.now(),
+              firstDate: DateTime(1900),
+              lastDate: DateTime.now(),
+            );
+            if (pickedDate != null) {
+              setState(() {
+                _selectedDate = pickedDate;
+                _dateController.text =
+                    DateFormat('dd/MM/yyyy').format(pickedDate);
+              });
+            }
+          },
+        ),
+      ),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Data de nascimento é obrigatória';
+        }
+        try {
+          final parts = value.split('/');
+          if (parts.length != 3) throw Exception();
+          final day = int.parse(parts[0]);
+          final month = int.parse(parts[1]);
+          final year = int.parse(parts[2]);
+          _selectedDate =
+              DateTime(year, month, day); // define a data para envio
+        } catch (_) {
+          return 'Data inválida';
+        }
+        return null;
+      },
+    );
   }
 
   @override
@@ -271,129 +391,6 @@ class _RegisterPageState extends State<RegisterPage> {
             ],
           ),
         ));
-  }
-
-  Widget _buildTextField(String label, TextEditingController controller,
-      {bool obscureText = false, String? Function(String?)? validator}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: TextFormField(
-        controller: controller,
-        obscureText: obscureText,
-        validator: validator,
-        decoration: InputDecoration(
-          labelText: label,
-          errorMaxLines: 3,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.blue, width: 2),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDropdown(String label, List<String> items, String value) {
-    final dropdownItems = ['Selecione', ...items];
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: DropdownButtonFormField<String>(
-        value: value,
-        onChanged: (newValue) => setState(() => _selectedState = newValue!),
-        items: items
-            .map((item) => DropdownMenuItem(value: item, child: Text(item)))
-            .toList(),
-        decoration: InputDecoration(
-          labelText: label,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-        validator: (value) {
-          if (value == null || value == 'Selecione') {
-            return 'Selecione um estado válido';
-          }
-          return null;
-        },
-      ),
-    );
-  }
-
-  Widget _buildDatePicker(String label) {
-    return TextFormField(
-      controller: _dateController,
-      keyboardType: TextInputType.number,
-      inputFormatters: [DateInputFormatter()],
-      decoration: InputDecoration(
-        labelText: label,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        suffixIcon: IconButton(
-          icon: const Icon(Icons.calendar_today),
-          onPressed: () async {
-            final pickedDate = await showDatePicker(
-              context: context,
-              initialDate: _selectedDate ?? DateTime.now(),
-              firstDate: DateTime(1900),
-              lastDate: DateTime.now(),
-            );
-            if (pickedDate != null) {
-              setState(() {
-                _selectedDate = pickedDate;
-                _dateController.text =
-                    DateFormat('dd/MM/yyyy').format(pickedDate);
-              });
-            }
-          },
-        ),
-      ),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Data de nascimento é obrigatória';
-        }
-        try {
-          final parts = value.split('/');
-          if (parts.length != 3) throw Exception();
-          final day = int.parse(parts[0]);
-          final month = int.parse(parts[1]);
-          final year = int.parse(parts[2]);
-          _selectedDate =
-              DateTime(year, month, day); // define a data para envio
-        } catch (_) {
-          return 'Data inválida';
-        }
-        return null;
-      },
-    );
-  }
-
-  // Validações simples para os campos
-  String? _validateEmail(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'E-mail é obrigatório';
-    }
-    final regex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
-    if (!regex.hasMatch(value)) {
-      return 'E-mail inválido';
-    }
-    return null;
-  }
-
-  String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Senha é obrigatória';
-    }
-
-    if (_confirmPasswordController.value != _passwordController.value) {
-      return 'As senhas não coincidem';
-    }
-
-    final isStrongPassword = RegExp(
-        r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$');
-
-    if (!isStrongPassword.hasMatch(value)) {
-      return 'A senha deve ter pelo menos 8 caracteres, incluindo letra maiúscula, minúscula, número e caractere especial';
-    }
-
-    return null;
   }
 }
 

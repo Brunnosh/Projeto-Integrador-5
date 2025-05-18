@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../utils/environment.dart';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 String _despesasUrl = '';
@@ -15,17 +15,31 @@ class EditDespesaPage extends StatefulWidget {
 }
 
 class _EditDespesaPageState extends State<EditDespesaPage> {
-  int _currentStep = 0;
   final _formKey = GlobalKey<FormState>();
   final _descricaoController = TextEditingController();
   final _valorController = TextEditingController();
+  int _currentStep = 0;
+  int? _idCategoriaSelecionada;
+  int? _despesaId;
   DateTime? _selectedDate;
   DateTime? _fimRecorrencia;
   bool _recorrente = false;
-
   List<Map<String, dynamic>> _categorias = [];
-  int? _idCategoriaSelecionada;
-  int? _despesaId;
+
+  void _showSnackbar(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _onStepContinue() {
+    atualizarDespesa();
+  }
+
+  void _onStepCancel() {
+    if (_currentStep > 0) {
+      setState(() => _currentStep--);
+    }
+  }
 
   @override
   void initState() {
@@ -156,53 +170,6 @@ class _EditDespesaPageState extends State<EditDespesaPage> {
     }
   }
 
-  void _showSnackbar(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  void _onStepContinue() {
-    atualizarDespesa();
-  }
-
-  void _onStepCancel() {
-    if (_currentStep > 0) {
-      setState(() => _currentStep--);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Editar Despesa')),
-      body: Form(
-        key: _formKey,
-        child: Stepper(
-          currentStep: _currentStep,
-          onStepContinue: _onStepContinue,
-          onStepCancel: _onStepCancel,
-          steps: [
-            Step(
-              title: const Text('Detalhes da Despesa'),
-              content: Column(
-                children: [
-                  _buildTextField('Descrição', _descricaoController),
-                  _buildTextField('Valor', _valorController,
-                      keyboardType: TextInputType.number),
-                  _buildDatePicker('Data de Vencimento'),
-                  _buildCheckbox('Recorrente', _recorrente),
-                  if (_recorrente)
-                    _buildFimRecorrenciaPicker('Fim da Recorrência'),
-                  _buildDropdownCategoria(),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildTextField(String label, TextEditingController controller,
       {TextInputType keyboardType = TextInputType.text}) {
     return TextFormField(
@@ -299,6 +266,38 @@ class _EditDespesaPageState extends State<EditDespesaPage> {
           ),
         ),
       ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Editar Despesa')),
+      body: Form(
+        key: _formKey,
+        child: Stepper(
+          currentStep: _currentStep,
+          onStepContinue: _onStepContinue,
+          onStepCancel: _onStepCancel,
+          steps: [
+            Step(
+              title: const Text('Detalhes da Despesa'),
+              content: Column(
+                children: [
+                  _buildTextField('Descrição', _descricaoController),
+                  _buildTextField('Valor', _valorController,
+                      keyboardType: TextInputType.number),
+                  _buildDatePicker('Data de Vencimento'),
+                  _buildCheckbox('Recorrente', _recorrente),
+                  if (_recorrente)
+                    _buildFimRecorrenciaPicker('Fim da Recorrência'),
+                  _buildDropdownCategoria(),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -1,10 +1,10 @@
-import 'dart:convert';
 import 'dart:io';
-import 'package:device_info_plus/device_info_plus.dart';
+import 'dart:convert';
+import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
+import 'package:device_info_plus/device_info_plus.dart';
 
 class ConfiguracoesPage extends StatefulWidget {
   final Map<String, dynamic> dadosUsuario;
@@ -16,40 +16,29 @@ class ConfiguracoesPage extends StatefulWidget {
 }
 
 class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
-  String _estadosUrl = '';
-  Map<int, String> estadosMap = {};
-  DateTime? _selectedDate;
-
-  bool _editandoNome = false;
   final _nomeController = TextEditingController();
   final _sobrenomeController = TextEditingController();
-
-  bool _editandoEmail = false;
   final _emailController = TextEditingController();
-
-  bool _editandoNascimento = false;
   final _dateController = TextEditingController();
-
-  bool _editandoEndereco = false;
   final _cepController = TextEditingController();
   final _ruaController = TextEditingController();
   final _numeroController = TextEditingController();
   final _bairroController = TextEditingController();
   final _complementoController = TextEditingController();
   int? _idEstadoSelecionado;
+  Map<int, String> estadosMap = {};
+  DateTime? _selectedDate;
+  bool _editandoNome = false;
+  bool _editandoEmail = false;
+  bool _editandoNascimento = false;
+  bool _editandoEndereco = false;
+  String _estadosUrl = '';
 
   String? _validateRequired(String? value) {
     if (value == null || value.isEmpty) {
       return 'Campo obrigatório';
     }
     return null;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _setupApiUrl();
-    _inicializarControllers();
   }
 
   void _inicializarControllers() {
@@ -60,6 +49,13 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
     _bairroController.text = endereco['bairro'] ?? '';
     _complementoController.text = endereco['complemento'] ?? '';
     _idEstadoSelecionado = endereco['id_estado'];
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _setupApiUrl();
+    _inicializarControllers();
   }
 
   Future<bool> isRunningOnEmulator() async {
@@ -99,6 +95,290 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
     } catch (e) {
       print('Erro ao carregar estados: $e');
     }
+  }
+
+  Future<void> _salvarNome() async {
+    final idLogin = widget.dadosUsuario['id_login'];
+    final isEmulator = await isRunningOnEmulator();
+    final baseUrl =
+        isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
+    final url = Uri.parse('$baseUrl/atualizar-nome/$idLogin');
+
+    final body = jsonEncode({
+      "nome": _nomeController.text.trim(),
+      "sobrenome": _sobrenomeController.text.trim(),
+    });
+
+    try {
+      final response = await http.put(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: body,
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          widget.dadosUsuario['nome'] = _nomeController.text;
+          widget.dadosUsuario['sobrenome'] = _sobrenomeController.text;
+          _editandoNome = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Nome atualizado com sucesso")),
+        );
+      } else {
+        print('Erro: ${response.body}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Erro ao atualizar nome")),
+        );
+      }
+    } catch (e) {
+      print('Erro ao enviar atualização: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Erro na comunicação com o servidor")),
+      );
+    }
+  }
+
+  Future<void> _salvarEmail() async {
+    final idLogin = widget.dadosUsuario['id_login'];
+    final isEmulator = await isRunningOnEmulator();
+    final baseUrl =
+        isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
+    final url = Uri.parse('$baseUrl/atualizar-email/$idLogin');
+
+    final body = jsonEncode({
+      "email": _emailController.text.trim(),
+    });
+
+    try {
+      final response = await http.put(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: body,
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          widget.dadosUsuario['email'] = _emailController.text.trim();
+          _editandoEmail = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("E-mail atualizado com sucesso")),
+        );
+      } else {
+        print('Erro: ${response.body}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Erro ao atualizar e-mail")),
+        );
+      }
+    } catch (e) {
+      print('Erro ao enviar atualização: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Erro na comunicação com o servidor")),
+      );
+    }
+  }
+
+  Future<void> _salvarNascimento() async {
+    final idLogin = widget.dadosUsuario['id_login'];
+    final isEmulator = await isRunningOnEmulator();
+    final baseUrl =
+        isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
+    final url = Uri.parse('$baseUrl/atualizar-nascimento/$idLogin');
+
+    final nascimentoFormatado = DateFormat('yyyy-MM-dd').format(_selectedDate!);
+    final body = jsonEncode({
+      "data_nascimento": nascimentoFormatado,
+    });
+
+    try {
+      final response = await http.put(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: body,
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          widget.dadosUsuario['data_nascimento'] = _dateController.text.trim();
+          _editandoNascimento = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text("Data de nascimento atualizado com sucesso")),
+        );
+      } else {
+        print('Erro: ${response.body}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Erro ao atualizar data de nascimento")),
+        );
+      }
+    } catch (e) {
+      print('Erro ao enviar atualização: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Erro na comunicação com o servidor")),
+      );
+    }
+  }
+
+  Future<void> _salvarEndereco() async {
+    final idEndereco = widget.dadosUsuario['endereco']['id'];
+    final isEmulator = await isRunningOnEmulator();
+    final baseUrl =
+        isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
+    final url = Uri.parse('$baseUrl/atualizar-endereco/$idEndereco');
+
+    final body = jsonEncode({
+      "cep": _cepController.text,
+      "rua": _ruaController.text,
+      "numero": _numeroController.text,
+      "bairro": _bairroController.text,
+      "complemento": _complementoController.text,
+      "id_estado": _idEstadoSelecionado,
+    });
+
+    try {
+      final response = await http.put(url,
+          headers: {"Content-Type": "application/json"}, body: body);
+
+      if (response.statusCode == 200) {
+        setState(() {
+          _editandoEndereco = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Endereço atualizado com sucesso")),
+        );
+      } else {
+        print('Erro: ${response.body}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Erro ao atualizar endereço")),
+        );
+      }
+    } catch (e) {
+      print('Erro ao enviar atualização: $e');
+    }
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: Colors.blueAccent,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEditableField(String label, TextEditingController controller,
+      {bool obscureText = false, String? Function(String?)? validator}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: TextFormField(
+        controller: controller,
+        obscureText: obscureText,
+        validator: validator,
+        decoration: InputDecoration(
+          labelText: label,
+          errorMaxLines: 3,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.blue, width: 2),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEstadoDropdown() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: DropdownButtonFormField<int>(
+        value: _idEstadoSelecionado,
+        items: estadosMap.entries
+            .map((entry) =>
+                DropdownMenuItem(value: entry.key, child: Text(entry.value)))
+            .toList(),
+        onChanged: (value) {
+          setState(() {
+            _idEstadoSelecionado = value;
+          });
+        },
+        decoration: const InputDecoration(
+          labelText: 'Estado',
+          border: OutlineInputBorder(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEnderecoRow(IconData icon, String label, String? value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.blue, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '$label: ${value ?? 'Não informado'}',
+              style: const TextStyle(fontSize: 16),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDatePicker(String label) {
+    return TextFormField(
+      controller: _dateController,
+      keyboardType: TextInputType.number,
+      inputFormatters: [DateInputFormatter()],
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        suffixIcon: IconButton(
+          icon: const Icon(Icons.calendar_today),
+          onPressed: () async {
+            final pickedDate = await showDatePicker(
+              context: context,
+              initialDate: _selectedDate ?? DateTime.now(),
+              firstDate: DateTime(1900),
+              lastDate: DateTime.now(),
+            );
+            if (pickedDate != null) {
+              setState(() {
+                _selectedDate = pickedDate;
+                _dateController.text =
+                    DateFormat('dd/MM/yyyy').format(pickedDate);
+              });
+            }
+          },
+        ),
+      ),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Data de nascimento é obrigatória';
+        }
+        try {
+          final parts = value.split('/');
+          if (parts.length != 3) throw Exception();
+          final day = int.parse(parts[0]);
+          final month = int.parse(parts[1]);
+          final year = int.parse(parts[2]);
+          _selectedDate =
+              DateTime(year, month, day); // define a data para envio
+        } catch (_) {
+          return 'Data inválida';
+        }
+        return null;
+      },
+    );
   }
 
   @override
@@ -325,290 +605,6 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: Colors.blueAccent,
-        ),
-      ),
-    );
-  }
-
-  Future<void> _salvarNome() async {
-    final idLogin = widget.dadosUsuario['id_login'];
-    final isEmulator = await isRunningOnEmulator();
-    final baseUrl =
-        isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
-    final url = Uri.parse('$baseUrl/atualizar-nome/$idLogin');
-
-    final body = jsonEncode({
-      "nome": _nomeController.text.trim(),
-      "sobrenome": _sobrenomeController.text.trim(),
-    });
-
-    try {
-      final response = await http.put(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: body,
-      );
-
-      if (response.statusCode == 200) {
-        setState(() {
-          widget.dadosUsuario['nome'] = _nomeController.text;
-          widget.dadosUsuario['sobrenome'] = _sobrenomeController.text;
-          _editandoNome = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Nome atualizado com sucesso")),
-        );
-      } else {
-        print('Erro: ${response.body}');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Erro ao atualizar nome")),
-        );
-      }
-    } catch (e) {
-      print('Erro ao enviar atualização: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Erro na comunicação com o servidor")),
-      );
-    }
-  }
-
-  Future<void> _salvarEmail() async {
-    final idLogin = widget.dadosUsuario['id_login'];
-    final isEmulator = await isRunningOnEmulator();
-    final baseUrl =
-        isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
-    final url = Uri.parse('$baseUrl/atualizar-email/$idLogin');
-
-    final body = jsonEncode({
-      "email": _emailController.text.trim(),
-    });
-
-    try {
-      final response = await http.put(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: body,
-      );
-
-      if (response.statusCode == 200) {
-        setState(() {
-          widget.dadosUsuario['email'] = _emailController.text.trim();
-          _editandoEmail = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("E-mail atualizado com sucesso")),
-        );
-      } else {
-        print('Erro: ${response.body}');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Erro ao atualizar e-mail")),
-        );
-      }
-    } catch (e) {
-      print('Erro ao enviar atualização: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Erro na comunicação com o servidor")),
-      );
-    }
-  }
-
-  Future<void> _salvarNascimento() async {
-    final idLogin = widget.dadosUsuario['id_login'];
-    final isEmulator = await isRunningOnEmulator();
-    final baseUrl =
-        isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
-    final url = Uri.parse('$baseUrl/atualizar-nascimento/$idLogin');
-
-    final nascimentoFormatado = DateFormat('yyyy-MM-dd').format(_selectedDate!);
-    final body = jsonEncode({
-      "data_nascimento": nascimentoFormatado,
-    });
-
-    try {
-      final response = await http.put(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: body,
-      );
-
-      if (response.statusCode == 200) {
-        setState(() {
-          widget.dadosUsuario['data_nascimento'] = _dateController.text.trim();
-          _editandoNascimento = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text("Data de nascimento atualizado com sucesso")),
-        );
-      } else {
-        print('Erro: ${response.body}');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Erro ao atualizar data de nascimento")),
-        );
-      }
-    } catch (e) {
-      print('Erro ao enviar atualização: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Erro na comunicação com o servidor")),
-      );
-    }
-  }
-
-  Future<void> _salvarEndereco() async {
-    final idEndereco = widget.dadosUsuario['endereco']['id'];
-    final isEmulator = await isRunningOnEmulator();
-    final baseUrl =
-        isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
-    final url = Uri.parse('$baseUrl/atualizar-endereco/$idEndereco');
-
-    final body = jsonEncode({
-      "cep": _cepController.text,
-      "rua": _ruaController.text,
-      "numero": _numeroController.text,
-      "bairro": _bairroController.text,
-      "complemento": _complementoController.text,
-      "id_estado": _idEstadoSelecionado,
-    });
-
-    try {
-      final response = await http.put(url,
-          headers: {"Content-Type": "application/json"}, body: body);
-
-      if (response.statusCode == 200) {
-        setState(() {
-          _editandoEndereco = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Endereço atualizado com sucesso")),
-        );
-      } else {
-        print('Erro: ${response.body}');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Erro ao atualizar endereço")),
-        );
-      }
-    } catch (e) {
-      print('Erro ao enviar atualização: $e');
-    }
-  }
-
-  Widget _buildEditableField(String label, TextEditingController controller,
-      {bool obscureText = false, String? Function(String?)? validator}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: TextFormField(
-        controller: controller,
-        obscureText: obscureText,
-        validator: validator,
-        decoration: InputDecoration(
-          labelText: label,
-          errorMaxLines: 3,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.blue, width: 2),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEstadoDropdown() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: DropdownButtonFormField<int>(
-        value: _idEstadoSelecionado,
-        items: estadosMap.entries
-            .map((entry) =>
-                DropdownMenuItem(value: entry.key, child: Text(entry.value)))
-            .toList(),
-        onChanged: (value) {
-          setState(() {
-            _idEstadoSelecionado = value;
-          });
-        },
-        decoration: const InputDecoration(
-          labelText: 'Estado',
-          border: OutlineInputBorder(),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEnderecoRow(IconData icon, String label, String? value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.blue, size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              '$label: ${value ?? 'Não informado'}',
-              style: const TextStyle(fontSize: 16),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDatePicker(String label) {
-    return TextFormField(
-      controller: _dateController,
-      keyboardType: TextInputType.number,
-      inputFormatters: [DateInputFormatter()],
-      decoration: InputDecoration(
-        labelText: label,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        suffixIcon: IconButton(
-          icon: const Icon(Icons.calendar_today),
-          onPressed: () async {
-            final pickedDate = await showDatePicker(
-              context: context,
-              initialDate: _selectedDate ?? DateTime.now(),
-              firstDate: DateTime(1900),
-              lastDate: DateTime.now(),
-            );
-            if (pickedDate != null) {
-              setState(() {
-                _selectedDate = pickedDate;
-                _dateController.text =
-                    DateFormat('dd/MM/yyyy').format(pickedDate);
-              });
-            }
-          },
-        ),
-      ),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Data de nascimento é obrigatória';
-        }
-        try {
-          final parts = value.split('/');
-          if (parts.length != 3) throw Exception();
-          final day = int.parse(parts[0]);
-          final month = int.parse(parts[1]);
-          final year = int.parse(parts[2]);
-          _selectedDate =
-              DateTime(year, month, day); // define a data para envio
-        } catch (_) {
-          return 'Data inválida';
-        }
-        return null;
-      },
     );
   }
 }
