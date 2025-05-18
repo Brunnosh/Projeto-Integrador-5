@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from app.db import SessionLocal
 from app.models import login as login_model, endereco as endereco_model, dados_usuarios as usuario_model
-from app.schemas.cadastro import UsuarioCreate
+from app.schemas.cadastro import UsuarioCreate, EnderecoCreate
 from app.utils import security, token
 
 router = APIRouter()
@@ -70,6 +70,7 @@ def obter_dados_usuario(id_login: int , db: Session = Depends(get_db)):
         "data_nascimento": usuario.data_nascimento,
         "email": login.email if login else None,
         "endereco": {
+            "id": endereco.id,
             "rua": endereco.rua if endereco else None,
             "numero": endereco.numero if endereco else None,
             "bairro": endereco.bairro if endereco else None,
@@ -78,3 +79,26 @@ def obter_dados_usuario(id_login: int , db: Session = Depends(get_db)):
             "id_estado": endereco.id_estado if endereco else None,
         }
     }
+
+@router.put("/atualizar-endereco/{id_endereco}")
+def atualizar_endereco(id_endereco: int, dados: EnderecoCreate, db: Session = Depends(get_db)):
+    endereco = db.query(endereco_model.Endereco).filter_by(id=id_endereco).first()
+
+    if not endereco:
+        raise HTTPException(status_code=404, detail="Endereço não encontrado.")
+
+    for campo, valor in dados.dict(exclude_unset=True).items():
+        setattr(endereco, campo, valor)
+
+    db.commit()
+    db.refresh(endereco)
+
+    return {"mensagem": "Endereço atualizado com sucesso", "endereco": {
+        "id": endereco.id,
+        "rua": endereco.rua,
+        "numero": endereco.numero,
+        "bairro": endereco.bairro,
+        "complemento": endereco.complemento,
+        "cep": endereco.cep,
+        "id_estado": endereco.id_estado,
+    }}

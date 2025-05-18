@@ -18,10 +18,29 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
   String _estadosUrl = '';
   Map<int, String> estadosMap = {};
 
+  bool _editandoEndereco = false;
+  final _cepController = TextEditingController();
+  final _ruaController = TextEditingController();
+  final _numeroController = TextEditingController();
+  final _bairroController = TextEditingController();
+  final _complementoController = TextEditingController();
+  int? _idEstadoSelecionado;
+
   @override
   void initState() {
     super.initState();
     _setupApiUrl();
+    _inicializarControllers();
+  }
+
+  void _inicializarControllers() {
+    final endereco = widget.dadosUsuario['endereco'] ?? {};
+    _cepController.text = endereco['cep'] ?? '';
+    _ruaController.text = endereco['rua'] ?? '';
+    _numeroController.text = endereco['numero'] ?? '';
+    _bairroController.text = endereco['bairro'] ?? '';
+    _complementoController.text = endereco['complemento'] ?? '';
+    _idEstadoSelecionado = endereco['id_estado'];
   }
 
   Future<bool> isRunningOnEmulator() async {
@@ -42,6 +61,44 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
         isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
     _estadosUrl = '$baseUrl/estados';
     await _carregarEstados();
+  }
+
+  Future<void> _salvarEndereco() async {
+    final idEndereco = widget.dadosUsuario['endereco']['id'];
+    final isEmulator = await isRunningOnEmulator();
+    final baseUrl =
+        isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
+    final url = Uri.parse('$baseUrl/atualizar-endereco/$idEndereco');
+
+    final body = jsonEncode({
+      "cep": _cepController.text,
+      "rua": _ruaController.text,
+      "numero": _numeroController.text,
+      "bairro": _bairroController.text,
+      "complemento": _complementoController.text,
+      "id_estado": _idEstadoSelecionado,
+    });
+
+    try {
+      final response = await http.put(url,
+          headers: {"Content-Type": "application/json"}, body: body);
+
+      if (response.statusCode == 200) {
+        setState(() {
+          _editandoEndereco = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Endereço atualizado com sucesso")),
+        );
+      } else {
+        print('Erro: ${response.body}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Erro ao atualizar endereço")),
+        );
+      }
+    } catch (e) {
+      print('Erro ao enviar atualização: $e');
+    }
   }
 
   Future<void> _carregarEstados() async {
@@ -105,18 +162,50 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildEnderecoRow(Icons.map, 'CEP', endereco['cep']),
-                  _buildEnderecoRow(Icons.flag, 'Estado', nomeEstado),
-                  _buildEnderecoRow(Icons.home, 'Rua', endereco['rua']),
-                  _buildEnderecoRow(
-                      Icons.numbers, 'Número', endereco['numero']),
-                  _buildEnderecoRow(
-                      Icons.location_city, 'Bairro', endereco['bairro']),
-                  _buildEnderecoRow(
-                      Icons.place, 'Complemento', endereco['complemento']),
-                ],
+                children: _editandoEndereco
+                    ? [
+                        _buildEditableField('CEP', _cepController),
+                        _buildEstadoDropdown(),
+                        _buildEditableField('Rua', _ruaController),
+                        _buildEditableField('Número', _numeroController),
+                        _buildEditableField('Bairro', _bairroController),
+                        _buildEditableField(
+                            'Complemento', _complementoController),
+                        const SizedBox(height: 12),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.save),
+                          label: const Text("Salvar"),
+                          onPressed: _salvarEndereco,
+                        ),
+                      ]
+                    : [
+                        _buildEnderecoRow(
+                            Icons.map, 'CEP', _cepController.text),
+                        _buildEnderecoRow(
+                            Icons.flag,
+                            'Estado',
+                            estadosMap[_idEstadoSelecionado] ??
+                                'Carregando...'),
+                        _buildEnderecoRow(
+                            Icons.home, 'Rua', _ruaController.text),
+                        _buildEnderecoRow(
+                            Icons.numbers, 'Número', _numeroController.text),
+                        _buildEnderecoRow(Icons.location_city, 'Bairro',
+                            _bairroController.text),
+                        _buildEnderecoRow(Icons.place, 'Complemento',
+                            _complementoController.text),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: IconButton(
+                            icon: Icon(Icons.edit, color: Colors.blue),
+                            onPressed: () {
+                              setState(() {
+                                _editandoEndereco = true;
+                              });
+                            },
+                          ),
+                        ),
+                      ],
               ),
             ),
           ),
@@ -148,6 +237,41 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
         leading: Icon(icon, color: Colors.blue),
         title: Text(label),
         subtitle: Text(value ?? 'Não informado'),
+      ),
+    );
+  }
+
+  Widget _buildEditableField(String label, TextEditingController controller) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: TextFormField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEstadoDropdown() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: DropdownButtonFormField<int>(
+        value: _idEstadoSelecionado,
+        items: estadosMap.entries
+            .map((entry) =>
+                DropdownMenuItem(value: entry.key, child: Text(entry.value)))
+            .toList(),
+        onChanged: (value) {
+          setState(() {
+            _idEstadoSelecionado = value;
+          });
+        },
+        decoration: const InputDecoration(
+          labelText: 'Estado',
+          border: OutlineInputBorder(),
+        ),
       ),
     );
   }
