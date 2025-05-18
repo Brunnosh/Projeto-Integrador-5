@@ -1,14 +1,13 @@
 import 'dart:convert';
-import 'package:flutter/services.dart';
-import 'package:flutter_multi_formatter/formatters/money_input_enums.dart';
-import 'package:flutter_multi_formatter/formatters/money_input_formatter.dart';
-import 'package:frontend/pages/config_page.dart';
 import 'package:intl/intl.dart';
-
 import '../utils/environment.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:frontend/pages/config_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_multi_formatter/formatters/money_input_enums.dart';
+import 'package:flutter_multi_formatter/formatters/money_input_formatter.dart';
 
 String _receitasUrl = '';
 
@@ -29,7 +28,7 @@ class _EditReceitaPageState extends State<EditReceitaPage> {
   DateTime? _fimRecorrencia;
   bool _recorrente = false;
   int? _receitaId;
-  int _currentStep = 0;
+  // int _currentStep = 0;
 
   DateTime _parseDate(String input) {
     return DateFormat('dd/MM/yyyy').parseStrict(input);
@@ -39,16 +38,6 @@ class _EditReceitaPageState extends State<EditReceitaPage> {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
   }
-
-  // void _onStepContinue() {
-  //   atualizarReceita();
-  // }
-
-  // void _onStepCancel() {
-  //   if (_currentStep > 0) {
-  //     setState(() => _currentStep--);
-  //   }
-  // }
 
   @override
   void initState() {
@@ -109,11 +98,7 @@ class _EditReceitaPageState extends State<EditReceitaPage> {
   }
 
   Future<void> atualizarReceita() async {
-    if (!_formKey.currentState!
-            .validate() /*||
-        _selectedDate == null ||
-        _receitaId == null*/
-        ) {
+    if (!_formKey.currentState!.validate()) {
       _showSnackbar("Preencha todos os campos corretamente.");
       return;
     }
@@ -253,23 +238,6 @@ class _EditReceitaPageState extends State<EditReceitaPage> {
     );
   }
 
-  // Widget _buildTextField(String label, TextEditingController controller,
-  //     {TextInputType keyboardType = TextInputType.text}) {
-  //   return TextFormField(
-  //     controller: controller,
-  //     keyboardType: keyboardType,
-  //     inputFormatters: inputFormatters,
-  //     validator: (value) =>
-  //         value == null || value.isEmpty ? 'Campo obrigatório' : null,
-  //     decoration: InputDecoration(
-  //       labelText: label,
-  //       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-  //       filled: true,
-  //       fillColor: Colors.grey[100],
-  //     ),
-  //   );
-  // }
-
   Widget _buildDateField(String label, TextEditingController controller,
       {bool obrigatorio = true}) {
     return TextFormField(
@@ -302,80 +270,6 @@ class _EditReceitaPageState extends State<EditReceitaPage> {
       },
     );
   }
-
-  // Widget _buildCheckbox(String label, bool value) {
-  //   return CheckboxListTile(
-  //     title: Text(label),
-  //     value: value,
-  //     onChanged: (newValue) => setState(() => _recorrente = newValue ?? false),
-  //   );
-  // }
-
-  // Widget _buildFimRecorrenciaPicker(String label) {
-  //   return Column(
-  //     crossAxisAlignment: CrossAxisAlignment.start,
-  //     children: [
-  //       Text(label),
-  //       const SizedBox(height: 8),
-  //       GestureDetector(
-  //         onTap: () async {
-  //           final pickedDate = await showDatePicker(
-  //             context: context,
-  //             initialDate: DateTime.now(),
-  //             firstDate: DateTime(1900),
-  //             lastDate: DateTime(2100),
-  //           );
-  //           if (pickedDate != null) {
-  //             setState(() => _fimRecorrencia = pickedDate);
-  //           }
-  //         },
-  //         child: Container(
-  //           padding: const EdgeInsets.all(12),
-  //           decoration: BoxDecoration(
-  //             border: Border.all(color: Colors.blue),
-  //             borderRadius: BorderRadius.circular(8),
-  //           ),
-  //           child: Text(_fimRecorrencia == null
-  //               ? 'Selecione a data (opcional)'
-  //               : _fimRecorrencia!.toIso8601String().split('T')[0]),
-  //         ),
-  //       ),
-  //     ],
-  //   );
-  // }
-
-  // Widget _buildDatePicker(String label) {
-  //   return Column(
-  //     crossAxisAlignment: CrossAxisAlignment.start,
-  //     children: [
-  //       Text(label),
-  //       const SizedBox(height: 8),
-  //       GestureDetector(
-  //         onTap: () async {
-  //           final pickedDate = await showDatePicker(
-  //             context: context,
-  //             initialDate: DateTime.now(),
-  //             firstDate: DateTime(1900),
-  //             lastDate: DateTime(2100),
-  //           );
-  //           if (pickedDate != null) {
-  //             setState(() => _selectedDate = pickedDate);
-  //           }
-  //         },
-  //         child: Container(
-  //           padding: const EdgeInsets.all(12),
-  //           decoration: BoxDecoration(
-  //             border: Border.all(color: Colors.blue),
-  //             borderRadius: BorderRadius.circular(8),
-  //           ),
-  //           child: Text(_selectedDate == null
-  //               ? 'Selecione a data'
-  //               : _selectedDate!.toIso8601String().split('T')[0]),
-  //         ),
-  //       ),
-  //     ],
-  //   );
-  // }
 
   @override
   Widget build(BuildContext context) {

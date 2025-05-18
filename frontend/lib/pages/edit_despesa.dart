@@ -1,11 +1,15 @@
 import 'dart:convert';
+import 'package:intl/intl.dart';
 import '../utils/environment.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:frontend/pages/config_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_multi_formatter/formatters/money_input_enums.dart';
+import 'package:flutter_multi_formatter/formatters/money_input_formatter.dart';
 
 String _despesasUrl = '';
-String _categoriasUrl = '';
 
 class EditDespesaPage extends StatefulWidget {
   const EditDespesaPage({super.key});
@@ -18,27 +22,23 @@ class _EditDespesaPageState extends State<EditDespesaPage> {
   final _formKey = GlobalKey<FormState>();
   final _descricaoController = TextEditingController();
   final _valorController = TextEditingController();
-  int _currentStep = 0;
-  int? _idCategoriaSelecionada;
-  int? _despesaId;
+  final _dataVencimentoController = TextEditingController();
+  final _fimRecorrenciaController = TextEditingController();
   DateTime? _selectedDate;
   DateTime? _fimRecorrencia;
+  int? _idCategoriaSelecionada;
   bool _recorrente = false;
+  int? _despesaId;
+  String _categoriasUrl = '';
   List<Map<String, dynamic>> _categorias = [];
+
+  DateTime _parseDate(String input) {
+    return DateFormat('dd/MM/yyyy').parseStrict(input);
+  }
 
   void _showSnackbar(String message) {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  void _onStepContinue() {
-    atualizarDespesa();
-  }
-
-  void _onStepCancel() {
-    if (_currentStep > 0) {
-      setState(() => _currentStep--);
-    }
   }
 
   @override
@@ -121,11 +121,18 @@ class _EditDespesaPageState extends State<EditDespesaPage> {
   }
 
   Future<void> atualizarDespesa() async {
-    if (!_formKey.currentState!.validate() ||
-        _selectedDate == null ||
-        _idCategoriaSelecionada == null ||
-        _despesaId == null) {
+    if (!_formKey.currentState!.validate()) {
       _showSnackbar("Preencha todos os campos corretamente.");
+      return;
+    }
+
+    try {
+      _selectedDate = _parseDate(_dataVencimentoController.text);
+      if (_recorrente && _fimRecorrenciaController.text.isNotEmpty) {
+        _fimRecorrencia = _parseDate(_fimRecorrenciaController.text);
+      }
+    } catch (_) {
+      _showSnackbar("Datas inválidas.");
       return;
     }
 
@@ -143,12 +150,21 @@ class _EditDespesaPageState extends State<EditDespesaPage> {
     final requestBody = {
       'id_login': idLogin,
       'descricao': _descricaoController.text,
-      'valor': double.tryParse(_valorController.text) ?? 0.0,
+      'valor': double.tryParse(
+            _valorController.text
+                .replaceAll(RegExp(r'[^\d,]'), '')
+                .replaceAll(',', '.'),
+          ) ??
+          0.0,
       'data_vencimento': _selectedDate!.toIso8601String().split('T')[0],
       'recorrencia': _recorrente,
-      'fim_recorrencia': _fimRecorrencia?.toIso8601String().split('T')[0],
       'id_categoria': _idCategoriaSelecionada,
     };
+
+    if (_fimRecorrencia != null) {
+      requestBody['fim_recorrencia'] =
+          _fimRecorrencia!.toIso8601String().split('T')[0];
+    }
 
     try {
       final response = await http.put(
@@ -158,146 +174,232 @@ class _EditDespesaPageState extends State<EditDespesaPage> {
       );
 
       if (response.statusCode == 200) {
-        _showSnackbar('Despesa atualizada com sucesso.');
+        final responseData = json.decode(response.body);
+        _showSnackbar(responseData['mensagem']);
+
         Future.delayed(const Duration(seconds: 1), () {
-          if (mounted) Navigator.pop(context, true);
+          if (mounted) Navigator.pop(context);
         });
       } else {
-        _showSnackbar('Erro ao atualizar: ${response.body}');
+        _showSnackbar('Erro ao editar: ${response.body}');
       }
     } catch (e) {
-      _showSnackbar('Erro ao atualizar: $e');
+      _showSnackbar('Erro ao editar: $e');
+    }
+  }
+
+  Future<void> _selectDate(TextEditingController controller) async {
+    final currentDate = DateTime.now();
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: currentDate,
+      firstDate: DateTime(1900),
+      lastDate: DateTime(2100),
+    );
+    if (pickedDate != null) {
+      controller.text = DateFormat('dd/MM/yyyy').format(pickedDate);
     }
   }
 
   Widget _buildTextField(String label, TextEditingController controller,
-      {TextInputType keyboardType = TextInputType.text}) {
+      {TextInputType keyboardType = TextInputType.text,
+      List<TextInputFormatter>? inputFormatters}) {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
       validator: (value) =>
           value == null || value.isEmpty ? 'Campo obrigatório' : null,
-      decoration: InputDecoration(labelText: label),
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        filled: true,
+        fillColor: Colors.grey[100],
+      ),
     );
   }
 
-  Widget _buildCheckbox(String label, bool value) {
-    return CheckboxListTile(
-      title: Text(label),
-      value: value,
-      onChanged: (newValue) => setState(() => _recorrente = newValue ?? false),
-    );
-  }
-
-  Widget _buildFimRecorrenciaPicker(String label) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label),
-        const SizedBox(height: 8),
-        GestureDetector(
-          onTap: () async {
-            final pickedDate = await showDatePicker(
-              context: context,
-              initialDate: DateTime.now(),
-              firstDate: DateTime(1900),
-              lastDate: DateTime(2100),
-            );
-            if (pickedDate != null) {
-              setState(() => _fimRecorrencia = pickedDate);
-            }
-          },
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.blue),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(_fimRecorrencia == null
-                ? 'Selecione a data (opcional)'
-                : _fimRecorrencia!.toIso8601String().split('T')[0]),
-          ),
+  Widget _buildDateField(String label, TextEditingController controller,
+      {bool obrigatorio = true}) {
+    return TextFormField(
+      controller: controller,
+      readOnly: false,
+      inputFormatters: [DateInputFormatter()],
+      keyboardType: TextInputType.number,
+      decoration: InputDecoration(
+        labelText: label,
+        suffixIcon: IconButton(
+          icon: const Icon(Icons.calendar_today),
+          onPressed: () => _selectDate(controller),
         ),
-      ],
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        filled: true,
+        fillColor: Colors.grey[100],
+      ),
+      validator: (value) {
+        if (obrigatorio && (value == null || value.isEmpty)) {
+          return 'Campo obrigatório';
+        }
+        if (value != null && value.isNotEmpty) {
+          try {
+            _parseDate(value);
+          } catch (_) {
+            return 'Data inválida (ex: 10/04/2025)';
+          }
+        }
+        return null;
+      },
     );
   }
 
-  Widget _buildDropdownCategoria() {
+  Widget _buildRecorrenciaSwitch() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SwitchListTile(
+            title: Row(
+              children: const [
+                Icon(Icons.repeat, color: Colors.blue),
+                SizedBox(width: 8),
+                Text('Despesa Recorrente'),
+              ],
+            ),
+            value: _recorrente,
+            onChanged: (value) {
+              setState(() {
+                _recorrente = value;
+              });
+            },
+            activeColor: Colors.blue,
+            contentPadding: EdgeInsets.zero,
+          ),
+          if (_recorrente)
+            _buildDateField(
+                'Fim da Recorrência (opcional)', _fimRecorrenciaController,
+                obrigatorio: false),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoriaDropdown() {
     return DropdownButtonFormField<int>(
       value: _idCategoriaSelecionada,
-      onChanged: (id) => setState(() => _idCategoriaSelecionada = id),
       items: _categorias
           .map((cat) => DropdownMenuItem<int>(
                 value: cat['id'],
-                child: Text(utf8.decode(utf8.encode(cat['nome']))),
+                child: Text(cat['nome']),
               ))
           .toList(),
-      decoration: const InputDecoration(labelText: 'Categoria'),
-    );
-  }
-
-  Widget _buildDatePicker(String label) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label),
-        const SizedBox(height: 8),
-        GestureDetector(
-          onTap: () async {
-            final pickedDate = await showDatePicker(
-              context: context,
-              initialDate: DateTime.now(),
-              firstDate: DateTime(1900),
-              lastDate: DateTime(2100),
-            );
-            if (pickedDate != null) {
-              setState(() => _selectedDate = pickedDate);
-            }
-          },
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.blue),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(_selectedDate == null
-                ? 'Selecione a data'
-                : _selectedDate!.toIso8601String().split('T')[0]),
-          ),
-        ),
-      ],
+      onChanged: (value) {
+        setState(() {
+          _idCategoriaSelecionada = value;
+        });
+      },
+      decoration: InputDecoration(
+        labelText: 'Categoria *',
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        filled: true,
+        fillColor: Colors.grey[100],
+      ),
+      validator: (value) => value == null ? 'Selecione uma categoria' : null,
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Editar Despesa')),
-      body: Form(
-        key: _formKey,
-        child: Stepper(
-          currentStep: _currentStep,
-          onStepContinue: _onStepContinue,
-          onStepCancel: _onStepCancel,
-          steps: [
-            Step(
-              title: const Text('Detalhes da Despesa'),
-              content: Column(
-                children: [
-                  _buildTextField('Descrição', _descricaoController),
-                  _buildTextField('Valor', _valorController,
-                      keyboardType: TextInputType.number),
-                  _buildDatePicker('Data de Vencimento'),
-                  _buildCheckbox('Recorrente', _recorrente),
-                  if (_recorrente)
-                    _buildFimRecorrenciaPicker('Fim da Recorrência'),
-                  _buildDropdownCategoria(),
+      appBar: AppBar(title: const Text('Inserir Despesa')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            children: [
+              _buildTextField('Descrição *', _descricaoController),
+              const SizedBox(height: 12),
+              _buildDateField(
+                  'Data de Vencimento *', _dataVencimentoController),
+              const SizedBox(height: 12),
+              _buildTextField(
+                'Valor *',
+                _valorController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  MoneyInputFormatter(
+                    thousandSeparator: ThousandSeparator.Period,
+                    mantissaLength: 2,
+                    trailingSymbol: '',
+                    leadingSymbol: 'R\$ ',
+                  )
                 ],
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              _buildCategoriaDropdown(),
+              const SizedBox(height: 12),
+              _buildRecorrenciaSwitch(),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
+                      backgroundColor: Colors.blue,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: atualizarDespesa,
+                    icon: const Icon(Icons.save),
+                    label: const Text('Salvar'),
+                  ),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
+                      backgroundColor: Colors.grey,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.cancel),
+                    label: const Text('Cancelar'),
+                  ),
+                ],
+              )
+            ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+class DateInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    var text = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    final buffer = StringBuffer();
+    for (int i = 0; i < text.length && i < 8; i++) {
+      if (i == 2 || i == 4) buffer.write('/');
+      buffer.write(text[i]);
+    }
+
+    return TextEditingValue(
+      text: buffer.toString(),
+      selection: TextSelection.collapsed(offset: buffer.length),
     );
   }
 }
