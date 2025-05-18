@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 
@@ -17,6 +18,7 @@ class ConfiguracoesPage extends StatefulWidget {
 class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
   String _estadosUrl = '';
   Map<int, String> estadosMap = {};
+  DateTime? _selectedDate;
 
   bool _editandoNome = false;
   final _nomeController = TextEditingController();
@@ -26,7 +28,7 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
   final _emailController = TextEditingController();
 
   bool _editandoNascimento = false;
-  final _nascimentoController = TextEditingController();
+  final _dateController = TextEditingController();
 
   bool _editandoEndereco = false;
   final _cepController = TextEditingController();
@@ -35,6 +37,13 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
   final _bairroController = TextEditingController();
   final _complementoController = TextEditingController();
   int? _idEstadoSelecionado;
+
+  String? _validateRequired(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Campo obrigatório';
+    }
+    return null;
+  }
 
   @override
   void initState() {
@@ -92,54 +101,6 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
     }
   }
 
-  String formatarData(String? data) {
-    if (data == null) return 'Não informado';
-    try {
-      final dataParse = DateTime.parse(data);
-      return DateFormat('dd/MM/yyyy').format(dataParse);
-    } catch (e) {
-      return 'Formato inválido';
-    }
-  }
-
-  Future<void> _salvarEndereco() async {
-    final idEndereco = widget.dadosUsuario['endereco']['id'];
-    final isEmulator = await isRunningOnEmulator();
-    final baseUrl =
-        isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
-    final url = Uri.parse('$baseUrl/atualizar-endereco/$idEndereco');
-
-    final body = jsonEncode({
-      "cep": _cepController.text,
-      "rua": _ruaController.text,
-      "numero": _numeroController.text,
-      "bairro": _bairroController.text,
-      "complemento": _complementoController.text,
-      "id_estado": _idEstadoSelecionado,
-    });
-
-    try {
-      final response = await http.put(url,
-          headers: {"Content-Type": "application/json"}, body: body);
-
-      if (response.statusCode == 200) {
-        setState(() {
-          _editandoEndereco = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Endereço atualizado com sucesso")),
-        );
-      } else {
-        print('Erro: ${response.body}');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Erro ao atualizar endereço")),
-        );
-      }
-    } catch (e) {
-      print('Erro ao enviar atualização: $e');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final endereco = widget.dadosUsuario['endereco'] ?? {};
@@ -165,8 +126,10 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
               child: _editandoNome
                   ? Column(
                       children: [
-                        _buildEditableField('Nome', _nomeController),
-                        _buildEditableField('Sobrenome', _sobrenomeController),
+                        _buildEditableField('Nome', _nomeController,
+                            validator: _validateRequired),
+                        _buildEditableField('Sobrenome', _sobrenomeController,
+                            validator: _validateRequired),
                         const SizedBox(height: 8),
                         ElevatedButton.icon(
                           icon: const Icon(Icons.save),
@@ -215,7 +178,8 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
               child: _editandoEmail
                   ? Column(
                       children: [
-                        _buildEditableField('E-mail', _emailController),
+                        _buildEditableField('E-mail', _emailController,
+                            validator: _validateRequired),
                         const SizedBox(height: 8),
                         ElevatedButton.icon(
                           icon: const Icon(Icons.save),
@@ -262,8 +226,7 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
               child: _editandoNascimento
                   ? Column(
                       children: [
-                        _buildEditableField(
-                            'Data de Nascimento:', _nascimentoController),
+                        _buildDatePicker('Data de Nascimento:'),
                         const SizedBox(height: 8),
                         ElevatedButton.icon(
                           icon: const Icon(Icons.save),
@@ -280,8 +243,7 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
                             const Icon(Icons.cake, color: Colors.blue),
                             const SizedBox(width: 8),
                             Text(
-                              formatarData(
-                                  widget.dadosUsuario['data_nascimento']),
+                              widget.dadosUsuario['data_nascimento'],
                               style: const TextStyle(fontSize: 16),
                             ),
                           ],
@@ -291,8 +253,8 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
                           onPressed: () {
                             setState(() {
                               _editandoNascimento = true;
-                              _nascimentoController.text = formatarData(
-                                  widget.dadosUsuario['data_nascimento']);
+                              _dateController.text =
+                                  widget.dadosUsuario['data_nascimento'];
                             });
                           },
                         ),
@@ -312,11 +274,15 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
               child: Column(
                 children: _editandoEndereco
                     ? [
-                        _buildEditableField('CEP', _cepController),
+                        _buildEditableField('CEP', _cepController,
+                            validator: _validateRequired),
                         _buildEstadoDropdown(),
-                        _buildEditableField('Rua', _ruaController),
-                        _buildEditableField('Número', _numeroController),
-                        _buildEditableField('Bairro', _bairroController),
+                        _buildEditableField('Rua', _ruaController,
+                            validator: _validateRequired),
+                        _buildEditableField('Número', _numeroController,
+                            validator: _validateRequired),
+                        _buildEditableField('Bairro', _bairroController,
+                            validator: _validateRequired),
                         _buildEditableField(
                             'Complemento', _complementoController),
                         const SizedBox(height: 12),
@@ -465,8 +431,9 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
         isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
     final url = Uri.parse('$baseUrl/atualizar-nascimento/$idLogin');
 
+    final nascimentoFormatado = DateFormat('yyyy-MM-dd').format(_selectedDate!);
     final body = jsonEncode({
-      "data_nascimento": _nascimentoController.text.trim(),
+      "data_nascimento": nascimentoFormatado,
     });
 
     try {
@@ -478,8 +445,7 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
 
       if (response.statusCode == 200) {
         setState(() {
-          widget.dadosUsuario['data_nascimento'] =
-              _nascimentoController.text.trim();
+          widget.dadosUsuario['data_nascimento'] = _dateController.text.trim();
           _editandoNascimento = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
@@ -500,14 +466,60 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
     }
   }
 
-  Widget _buildEditableField(String label, TextEditingController controller) {
+  Future<void> _salvarEndereco() async {
+    final idEndereco = widget.dadosUsuario['endereco']['id'];
+    final isEmulator = await isRunningOnEmulator();
+    final baseUrl =
+        isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
+    final url = Uri.parse('$baseUrl/atualizar-endereco/$idEndereco');
+
+    final body = jsonEncode({
+      "cep": _cepController.text,
+      "rua": _ruaController.text,
+      "numero": _numeroController.text,
+      "bairro": _bairroController.text,
+      "complemento": _complementoController.text,
+      "id_estado": _idEstadoSelecionado,
+    });
+
+    try {
+      final response = await http.put(url,
+          headers: {"Content-Type": "application/json"}, body: body);
+
+      if (response.statusCode == 200) {
+        setState(() {
+          _editandoEndereco = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Endereço atualizado com sucesso")),
+        );
+      } else {
+        print('Erro: ${response.body}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Erro ao atualizar endereço")),
+        );
+      }
+    } catch (e) {
+      print('Erro ao enviar atualização: $e');
+    }
+  }
+
+  Widget _buildEditableField(String label, TextEditingController controller,
+      {bool obscureText = false, String? Function(String?)? validator}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: TextFormField(
         controller: controller,
+        obscureText: obscureText,
+        validator: validator,
         decoration: InputDecoration(
           labelText: label,
-          border: const OutlineInputBorder(),
+          errorMaxLines: 3,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.blue, width: 2),
+          ),
         ),
       ),
     );
@@ -550,6 +562,73 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildDatePicker(String label) {
+    return TextFormField(
+      controller: _dateController,
+      keyboardType: TextInputType.number,
+      inputFormatters: [DateInputFormatter()],
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        suffixIcon: IconButton(
+          icon: const Icon(Icons.calendar_today),
+          onPressed: () async {
+            final pickedDate = await showDatePicker(
+              context: context,
+              initialDate: _selectedDate ?? DateTime.now(),
+              firstDate: DateTime(1900),
+              lastDate: DateTime.now(),
+            );
+            if (pickedDate != null) {
+              setState(() {
+                _selectedDate = pickedDate;
+                _dateController.text =
+                    DateFormat('dd/MM/yyyy').format(pickedDate);
+              });
+            }
+          },
+        ),
+      ),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Data de nascimento é obrigatória';
+        }
+        try {
+          final parts = value.split('/');
+          if (parts.length != 3) throw Exception();
+          final day = int.parse(parts[0]);
+          final month = int.parse(parts[1]);
+          final year = int.parse(parts[2]);
+          _selectedDate =
+              DateTime(year, month, day); // define a data para envio
+        } catch (_) {
+          return 'Data inválida';
+        }
+        return null;
+      },
+    );
+  }
+}
+
+class DateInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    var text = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    final buffer = StringBuffer();
+    for (int i = 0; i < text.length && i < 8; i++) {
+      if (i == 2 || i == 4) buffer.write('/');
+      buffer.write(text[i]);
+    }
+
+    final formatted = buffer.toString();
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
 }
