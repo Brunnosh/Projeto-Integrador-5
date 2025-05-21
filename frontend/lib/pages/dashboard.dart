@@ -16,6 +16,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   late String selectedMonth, selectedYear;
   late List<String> years;
+  double saldo = 0.0;
 
   List<BarChartGroupData> barGroups = [];
   List<PieChartSectionData> pieSections = [];
@@ -23,6 +24,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<String> receitaLabels = [];
   List<FlSpot> despesaSpots = [];
   List<String> despesaLabels = [];
+  List<FlSpot> saldoSpots = [];
 
   String _diaVencimentoUrl = '';
   String _despesasCategoriaUrl = '';
@@ -64,10 +66,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _receitasPorMesUrl = '$baseUrl/total-receitas-periodo';
       _despesasPorMesUrl = '$baseUrl/total-despesas-periodo';
     });
-    _loadDespesasPorDiaVencimento();
-    _loadDespesasPorCategoria();
-    _loadReceitasPorPeriodo();
-    _loadDespesasPorPeriodo();
+    await _loadDespesasPorDiaVencimento();
+    await _loadDespesasPorCategoria();
+    await _loadReceitasPorPeriodo();
+    await _loadDespesasPorPeriodo();
+    await _loadSaldoPorPeriodo();
   }
 
   @override
@@ -233,6 +236,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
               .add('${item['mes'].toString().padLeft(2, '0')}/${item['ano']}');
         }
       });
+
+      _calcularSaldoSpots();
+    }
+  }
+
+  Future<void> _loadSaldoPorPeriodo() async {
+    final mes = monthToNumber[selectedMonth];
+    final receitaUrl = Uri.parse(
+        '$_receitasPorMesUrl?id_login=${widget.idLogin}&mes=$mes&ano=$selectedYear');
+    final despesaUrl = Uri.parse(
+        '$_despesasPorMesUrl?id_login=${widget.idLogin}&mes=$mes&ano=$selectedYear');
+
+    final receitaResponse = await http.get(receitaUrl);
+    final despesaResponse = await http.get(despesaUrl);
+
+    if (receitaResponse.statusCode == 200 &&
+        despesaResponse.statusCode == 200) {
+      final List<dynamic> receitas =
+          json.decode(utf8.decode(receitaResponse.bodyBytes));
+      final List<dynamic> despesas =
+          json.decode(utf8.decode(despesaResponse.bodyBytes));
+
+      final totalReceitas = receitas.fold<double>(
+          0.0, (sum, item) => sum + (item['valor'] as num).toDouble());
+      final totalDespesas = despesas.fold<double>(
+          0.0, (sum, item) => sum + (item['valor'] as num).toDouble());
+
+      setState(() {
+        saldo = totalReceitas - totalDespesas;
+      });
+    } else {
+      print('Erro ao carregar receitas ou despesas');
+    }
+  }
+
+  void _calcularSaldoSpots() {
+    if (receitaSpots.length != despesaSpots.length) return;
+
+    saldoSpots = [];
+    for (int i = 0; i < receitaSpots.length; i++) {
+      final double saldo = receitaSpots[i].y - despesaSpots[i].y;
+      saldoSpots.add(FlSpot(i.toDouble(), saldo));
     }
   }
 
@@ -326,169 +371,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildLineChartReceitas() {
-    final lineColor = bluePalette[4];
-
-    if (receitaSpots.isEmpty) {
-      return const SizedBox(
-        height: 220,
-        child: Center(child: Text('Nenhum dado disponível')),
-      );
-    }
-
-    // Encontra o valor máximo do eixo Y
-    final double maxY =
-        receitaSpots.map((e) => e.y).reduce((a, b) => a > b ? a : b);
-
-    // Define o intervalo: divide o valor máximo em 5 linhas (ajustável)
-    final double intervalY = (maxY / 5).ceilToDouble();
-
-    return SizedBox(
-      height: 220,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12.0),
-        child: LineChart(
-          LineChartData(
-            clipData: FlClipData.none(),
-            minX: 0,
-            maxX: receitaSpots.length > 1 ? receitaSpots.length - 1 : 0,
-            minY: 0,
-            maxY: (maxY + intervalY),
-            lineBarsData: [
-              LineChartBarData(
-                spots: receitaSpots,
-                isCurved: true,
-                color: lineColor,
-                dotData: FlDotData(show: true),
-                belowBarData: BarAreaData(
-                  show: true,
-                  color: lineColor.withOpacity(0.2),
-                ),
-              ),
-            ],
-            titlesData: FlTitlesData(
-              bottomTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  reservedSize: 32,
-                  showTitles: true,
-                  interval: 1,
-                  getTitlesWidget: (value, _) {
-                    final index = value.toInt();
-                    if (index >= 0 && index < receitaLabels.length) {
-                      return Text(receitaLabels[index],
-                          style: const TextStyle(fontSize: 10));
-                    }
-                    return const Text('');
-                  },
-                ),
-              ),
-              leftTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: 60,
-                  interval: intervalY,
-                  getTitlesWidget: (value, _) {
-                    return Text(
-                      value.toInt().toString(),
-                      style: const TextStyle(fontSize: 10),
-                    );
-                  },
-                ),
-              ),
-              topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              rightTitles:
-                  AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            ),
-            borderData: FlBorderData(show: false),
-            gridData: FlGridData(show: true),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLineChartDespesas() {
-    final lineColor = bluePalette[6];
-
-    if (despesaSpots.isEmpty) {
-      return const SizedBox(
-        height: 220,
-        child: Center(child: Text('Nenhum dado disponível')),
-      );
-    }
-
-    final double maxY =
-        despesaSpots.map((e) => e.y).reduce((a, b) => a > b ? a : b);
-
-    final double intervalY = (maxY / 5).ceilToDouble();
-
-    return SizedBox(
-      height: 220,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12.0),
-        child: LineChart(
-          LineChartData(
-            clipData: FlClipData.none(),
-            minX: 0,
-            maxX: despesaSpots.length > 1 ? despesaSpots.length - 1 : 0,
-            minY: 0,
-            maxY: (maxY + intervalY),
-            lineBarsData: [
-              LineChartBarData(
-                spots: despesaSpots,
-                isCurved: true,
-                color: lineColor,
-                dotData: FlDotData(show: true),
-                belowBarData: BarAreaData(
-                  show: true,
-                  color: lineColor.withOpacity(0.2),
-                ),
-              ),
-            ],
-            titlesData: FlTitlesData(
-              bottomTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  reservedSize: 32,
-                  showTitles: true,
-                  interval: 1,
-                  getTitlesWidget: (value, _) {
-                    final index = value.toInt();
-                    if (index >= 0 && index < despesaLabels.length) {
-                      return Text(despesaLabels[index],
-                          style: const TextStyle(fontSize: 10));
-                    }
-                    return const Text('');
-                  },
-                ),
-              ),
-              leftTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: 60,
-                  interval: intervalY,
-                  getTitlesWidget: (value, _) {
-                    return Text(
-                      value.toInt().toString(),
-                      style: const TextStyle(fontSize: 10),
-                    );
-                  },
-                ),
-              ),
-              topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              rightTitles:
-                  AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            ),
-            borderData: FlBorderData(show: false),
-            gridData: FlGridData(show: true),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildComparativoReceitaDespesaChart() {
     final greenColor = bluePalette[4];
     final redColor = bluePalette[6];
+    final blueColor = bluePalette[0];
 
     if (receitaSpots.isEmpty || despesaSpots.isEmpty) {
       return const Center(child: CircularProgressIndicator());
@@ -497,15 +383,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final labels =
         receitaLabels.length == despesaLabels.length ? receitaLabels : [];
 
-    // Cálculo do maior Y (entre receita e despesa)
-    final allValues = [...receitaSpots, ...despesaSpots].map((e) => e.y);
+    final allValues =
+        [...receitaSpots, ...despesaSpots, ...saldoSpots].map((e) => e.y);
+
+    // Encontrar valores mínimos e máximos considerando saldo também
     final double maxY = allValues.reduce((a, b) => a > b ? a : b);
-    final double intervalY = (maxY / 5).ceilToDouble();
+    final double minY = allValues.reduce((a, b) => a < b ? a : b);
+
+    // Define um intervalo visual confortável
+    final double intervalY = ((maxY - minY) / 5).ceilToDouble();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildLegendaItem(color: greenColor, label: 'Receitas'),
+              _buildLegendaItem(color: redColor, label: 'Despesas'),
+              _buildLegendaItem(color: blueColor, label: 'Saldo'),
+            ],
+          ),
+        ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12.0),
           child: SizedBox(
@@ -514,9 +416,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               LineChartData(
                 clipData: FlClipData.none(),
                 minX: 0,
-                maxX: labels.length > 1 ? labels.length - 1 : 0,
-                minY: 0,
-                maxY: (maxY + intervalY),
+                maxX: labels.length > 1 ? labels.length - 0.75 : 0,
+                minY: minY < 0 ? (minY - intervalY) : 0,
+                maxY: maxY + intervalY,
                 titlesData: FlTitlesData(
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
@@ -574,6 +476,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       color: redColor.withOpacity(0.2),
                     ),
                   ),
+                  LineChartBarData(
+                    spots: saldoSpots,
+                    isCurved: true,
+                    color: blueColor,
+                    barWidth: 3,
+                    dotData: FlDotData(show: true),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: blueColor.withOpacity(0.2),
+                    ),
+                  ),
                 ],
                 gridData: FlGridData(show: true),
                 borderData: FlBorderData(show: false),
@@ -581,6 +494,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildLegendaItem({required Color color, required String label}) {
+    return Row(
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(label, style: const TextStyle(fontSize: 12)),
       ],
     );
   }
@@ -646,22 +576,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 const SizedBox(height: 12),
                 _buildPieChart(),
-                // Gráfico Receitas por Mês
-                const SizedBox(height: 24),
-                const Text(
-                  'Receitas por Mês',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 12),
-                _buildLineChartReceitas(),
-                // Gráfico Despesas por Mês
-                const SizedBox(height: 24),
-                const Text(
-                  'Despesas por Mês',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 12),
-                _buildLineChartDespesas(),
                 // Gráfico Receitas x Despesas
                 const SizedBox(height: 24),
                 const Text(
