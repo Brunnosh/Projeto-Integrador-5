@@ -216,12 +216,68 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
     }
   }
 
+  // Future<void> _salvarNascimento() async {
+  //   final idLogin = widget.dadosUsuario['id_login'];
+  //   final isEmulator = await isRunningOnEmulator();
+  //   final baseUrl =
+  //       isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
+  //   final url = Uri.parse('$baseUrl/atualizar-nascimento/$idLogin');
+
+  //   final nascimentoFormatado = DateFormat('yyyy-MM-dd').format(_selectedDate!);
+  //   final body = jsonEncode({
+  //     "data_nascimento": nascimentoFormatado,
+  //   });
+
+  //   try {
+  //     final response = await http.put(
+  //       url,
+  //       headers: {"Content-Type": "application/json"},
+  //       body: body,
+  //     );
+
+  //     if (response.statusCode == 200) {
+  //       setState(() {
+  //         widget.dadosUsuario['data_nascimento'] = _dateController.text.trim();
+  //         _editandoNascimento = false;
+  //       });
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         const SnackBar(
+  //             content: Text("Data de nascimento atualizado com sucesso")),
+  //       );
+  //     } else {
+  //       print('Erro: ${response.body}');
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         const SnackBar(content: Text("Erro ao atualizar data de nascimento")),
+  //       );
+  //     }
+  //   } catch (e) {
+  //     print('Erro ao enviar atualização: $e');
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(content: Text("Erro na comunicação com o servidor")),
+  //     );
+  //   }
+  // }
+
   Future<void> _salvarNascimento() async {
     final idLogin = widget.dadosUsuario['id_login'];
     final isEmulator = await isRunningOnEmulator();
     final baseUrl =
         isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
     final url = Uri.parse('$baseUrl/atualizar-nascimento/$idLogin');
+
+    try {
+      final parts = _dateController.text.trim().split('/');
+      if (parts.length != 3) throw Exception();
+      final day = int.parse(parts[0]);
+      final month = int.parse(parts[1]);
+      final year = int.parse(parts[2]);
+      _selectedDate = DateTime(year, month, day);
+    } catch (_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Data de nascimento inválida")),
+      );
+      return;
+    }
 
     final nascimentoFormatado = DateFormat('yyyy-MM-dd').format(_selectedDate!);
     final body = jsonEncode({
@@ -242,7 +298,7 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
         });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text("Data de nascimento atualizado com sucesso")),
+              content: Text("Data de nascimento atualizada com sucesso")),
         );
       } else {
         print('Erro: ${response.body}');
