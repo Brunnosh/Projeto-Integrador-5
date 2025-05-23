@@ -25,6 +25,11 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
   final _numeroController = TextEditingController();
   final _bairroController = TextEditingController();
   final _complementoController = TextEditingController();
+
+  final GlobalKey<FormState> _formKeyNome = GlobalKey<FormState>();
+  final GlobalKey<FormState> _formKeyEmail = GlobalKey<FormState>();
+  final _formKeyEndereco = GlobalKey<FormState>();
+
   int? _idEstadoSelecionado;
   Map<int, String> estadosMap = {};
   DateTime? _selectedDate;
@@ -37,6 +42,17 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
   String? _validateRequired(String? value) {
     if (value == null || value.isEmpty) {
       return 'Campo obrigatório';
+    }
+    return null;
+  }
+
+  String? _validateEmail(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'E-mail é obrigatório';
+    }
+    final regex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+    if (!regex.hasMatch(value)) {
+      return 'E-mail inválido';
     }
     return null;
   }
@@ -98,6 +114,10 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
   }
 
   Future<void> _salvarNome() async {
+    if (!_formKeyNome.currentState!.validate()) {
+      return; // se tiver algum campo vazio, não continua
+    }
+
     final idLogin = widget.dadosUsuario['id_login'];
     final isEmulator = await isRunningOnEmulator();
     final baseUrl =
@@ -140,6 +160,10 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
   }
 
   Future<void> _salvarEmail() async {
+    if (!_formKeyEmail.currentState!.validate()) {
+      return; // se tiver algum campo vazio, não continua
+    }
+
     final idLogin = widget.dadosUsuario['id_login'];
     final isEmulator = await isRunningOnEmulator();
     final baseUrl =
@@ -308,9 +332,9 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
             _idEstadoSelecionado = value;
           });
         },
-        decoration: const InputDecoration(
+        decoration: InputDecoration(
           labelText: 'Estado',
-          border: OutlineInputBorder(),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
     );
@@ -383,10 +407,6 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
 
   @override
   Widget build(BuildContext context) {
-    final endereco = widget.dadosUsuario['endereco'] ?? {};
-    final idEstado = endereco['id_estado'];
-    final nomeEstado = estadosMap[idEstado] ?? 'Carregando...';
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Configurações'),
@@ -404,19 +424,22 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: _editandoNome
-                  ? Column(
-                      children: [
-                        _buildEditableField('Nome', _nomeController,
-                            validator: _validateRequired),
-                        _buildEditableField('Sobrenome', _sobrenomeController,
-                            validator: _validateRequired),
-                        const SizedBox(height: 8),
-                        ElevatedButton.icon(
-                          icon: const Icon(Icons.save),
-                          label: const Text("Salvar"),
-                          onPressed: _salvarNome,
-                        ),
-                      ],
+                  ? Form(
+                      key: _formKeyNome,
+                      child: Column(
+                        children: [
+                          _buildEditableField('Nome', _nomeController,
+                              validator: _validateRequired),
+                          _buildEditableField('Sobrenome', _sobrenomeController,
+                              validator: _validateRequired),
+                          const SizedBox(height: 8),
+                          ElevatedButton.icon(
+                            icon: const Icon(Icons.save),
+                            label: const Text("Salvar"),
+                            onPressed: _salvarNome,
+                          ),
+                        ],
+                      ),
                     )
                   : Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -456,17 +479,19 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: _editandoEmail
-                  ? Column(
-                      children: [
-                        _buildEditableField('E-mail', _emailController,
-                            validator: _validateRequired),
-                        const SizedBox(height: 8),
-                        ElevatedButton.icon(
-                          icon: const Icon(Icons.save),
-                          label: const Text("Salvar"),
-                          onPressed: _salvarEmail,
-                        ),
-                      ],
+                  ? Form(
+                      key: _formKeyEmail,
+                      child: Column(
+                        children: [
+                          _buildEditableField('Email', _emailController,
+                              validator: _validateEmail),
+                          ElevatedButton.icon(
+                            icon: const Icon(Icons.save),
+                            label: const Text("Salvar"),
+                            onPressed: _salvarEmail,
+                          ),
+                        ],
+                      ),
                     )
                   : Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -551,28 +576,43 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
             elevation: 2,
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: Column(
-                children: _editandoEndereco
-                    ? [
-                        _buildEditableField('CEP', _cepController,
-                            validator: _validateRequired),
-                        _buildEstadoDropdown(),
-                        _buildEditableField('Rua', _ruaController,
-                            validator: _validateRequired),
-                        _buildEditableField('Número', _numeroController,
-                            validator: _validateRequired),
-                        _buildEditableField('Bairro', _bairroController,
-                            validator: _validateRequired),
-                        _buildEditableField(
-                            'Complemento', _complementoController),
-                        const SizedBox(height: 12),
-                        ElevatedButton.icon(
-                          icon: const Icon(Icons.save),
-                          label: const Text("Salvar"),
-                          onPressed: _salvarEndereco,
-                        ),
-                      ]
-                    : [
+              child: _editandoEndereco
+                  ? Form(
+                      key: _formKeyEndereco,
+                      child: Column(
+                        children: [
+                          _buildEditableField('CEP', _cepController,
+                              validator: _validateRequired),
+                          _buildEstadoDropdown(),
+                          _buildEditableField('Rua', _ruaController,
+                              validator: _validateRequired),
+                          _buildEditableField('Número', _numeroController,
+                              validator: _validateRequired),
+                          _buildEditableField('Bairro', _bairroController,
+                              validator: _validateRequired),
+                          _buildEditableField(
+                              'Complemento', _complementoController),
+                          const SizedBox(height: 12),
+                          ElevatedButton.icon(
+                            icon: const Icon(Icons.save),
+                            label: const Text("Salvar"),
+                            onPressed: () {
+                              if (_formKeyEndereco.currentState!.validate() &&
+                                  _idEstadoSelecionado != null) {
+                                _salvarEndereco();
+                              } else if (_idEstadoSelecionado == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content: Text("Estado é obrigatório")),
+                                );
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    )
+                  : Column(
+                      children: [
                         _buildEnderecoRow(
                             Icons.map, 'CEP', _cepController.text),
                         _buildEnderecoRow(
@@ -591,7 +631,7 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
                         Align(
                           alignment: Alignment.centerRight,
                           child: IconButton(
-                            icon: Icon(Icons.edit, color: Colors.blue),
+                            icon: const Icon(Icons.edit, color: Colors.blue),
                             onPressed: () {
                               setState(() {
                                 _editandoEndereco = true;
@@ -600,7 +640,7 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
                           ),
                         ),
                       ],
-              ),
+                    ),
             ),
           ),
         ],
