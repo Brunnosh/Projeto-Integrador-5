@@ -325,8 +325,15 @@ class _HomePageState extends State<HomePage> {
         padding: const EdgeInsets.all(16),
         child: ListView(
           children: [
-            Text('Olá, $userName!',
-                style: Theme.of(context).textTheme.bodyLarge),
+            Center(
+              child: Text(
+                'Olá, $userName!',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                    ),
+              ),
+            ),
             const SizedBox(height: 30),
             Row(
               children: [
@@ -432,6 +439,7 @@ class _HomePageState extends State<HomePage> {
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddOptions,
         backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),
     );
