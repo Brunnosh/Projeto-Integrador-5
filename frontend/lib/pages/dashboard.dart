@@ -175,9 +175,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     softWrap: true,
                     overflow: TextOverflow.visible,
                     style: const TextStyle(
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black,
+                      color: Colors.white,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -185,7 +185,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     '${percentual.toStringAsFixed(1)}%',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.black,
+                      color: Colors.white,
                       fontWeight: FontWeight.normal,
                     ),
                     textAlign: TextAlign.center,
