@@ -431,6 +431,7 @@ class _HomePageState extends State<HomePage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddOptions,
+        backgroundColor: Colors.blue,
         child: const Icon(Icons.add),
       ),
     );

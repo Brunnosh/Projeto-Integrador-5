@@ -314,21 +314,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
         pieSectionsReceitas = [
           PieChartSectionData(
             value: receitasRecorrentes.toDouble(),
-            title:
-                'Recorrentes\n${(receitasRecorrentes / total * 100).toStringAsFixed(1)}%',
+            title: '${(receitasRecorrentes / total * 100).toStringAsFixed(1)}%',
             color: bluePalette[1],
             radius: 60,
             titleStyle: const TextStyle(
-                fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black),
+                fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
           ),
           PieChartSectionData(
             value: receitasNaoRecorrentes.toDouble(),
             title:
-                'Não Recorrentes\n${(receitasNaoRecorrentes / total * 100).toStringAsFixed(1)}%',
-            color: bluePalette[3],
+                '${(receitasNaoRecorrentes / total * 100).toStringAsFixed(1)}%',
+            color: bluePalette[2],
             radius: 60,
             titleStyle: const TextStyle(
-                fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black),
+                fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
           ),
         ];
       });
@@ -358,21 +357,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
         pieSectionsDespesas = [
           PieChartSectionData(
             value: despesasRecorrentes.toDouble(),
-            title:
-                'Recorrentes\n${(despesasRecorrentes / total * 100).toStringAsFixed(1)}%',
+            title: '${(despesasRecorrentes / total * 100).toStringAsFixed(1)}%',
             color: bluePalette[1],
             radius: 60,
             titleStyle: const TextStyle(
-                fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black),
+                fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
           ),
           PieChartSectionData(
             value: despesasNaoRecorrentes.toDouble(),
             title:
-                'Não Recorrentes\n${(despesasNaoRecorrentes / total * 100).toStringAsFixed(1)}%',
-            color: bluePalette[3],
+                '${(despesasNaoRecorrentes / total * 100).toStringAsFixed(1)}%',
+            color: bluePalette[2],
             radius: 60,
             titleStyle: const TextStyle(
-                fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black),
+                fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
           ),
         ];
       });
@@ -616,36 +614,78 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildPieReceitasRecorrencia() {
-    return SizedBox(
-      height: 220,
-      child: pieSectionsReceitas.isEmpty
-          ? const Center(child: Text('Nenhum dado disponível'))
-          : PieChart(
-              PieChartData(
-                sections: pieSectionsReceitas,
-                sectionsSpace: 2,
-                centerSpaceRadius: 40,
-              ),
-              swapAnimationDuration: const Duration(milliseconds: 500),
-              swapAnimationCurve: Curves.easeInOut,
+    if (pieSectionsReceitas.isEmpty) {
+      return const Center(child: Text('Nenhum dado disponível'));
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Legenda acima
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildLegendaItem(color: bluePalette[1], label: 'Recorrentes'),
+              const SizedBox(width: 16),
+              _buildLegendaItem(
+                  color: bluePalette[2], label: 'Não Recorrentes'),
+            ],
+          ),
+        ),
+        // Gráfico de Pizza
+        SizedBox(
+          height: 220,
+          child: PieChart(
+            PieChartData(
+              sections: pieSectionsReceitas,
+              sectionsSpace: 2,
+              centerSpaceRadius: 40,
             ),
+            swapAnimationDuration: const Duration(milliseconds: 500),
+            swapAnimationCurve: Curves.easeInOut,
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildPieDespesasRecorrencia() {
-    return SizedBox(
-      height: 220,
-      child: pieSectionsDespesas.isEmpty
-          ? const Center(child: Text('Nenhum dado disponível'))
-          : PieChart(
-              PieChartData(
-                sections: pieSectionsDespesas,
-                sectionsSpace: 2,
-                centerSpaceRadius: 40,
-              ),
-              swapAnimationDuration: const Duration(milliseconds: 500),
-              swapAnimationCurve: Curves.easeInOut,
+    if (pieSectionsDespesas.isEmpty) {
+      return const Center(child: Text('Nenhum dado disponível'));
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Legenda acima
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildLegendaItem(color: bluePalette[1], label: 'Recorrentes'),
+              const SizedBox(width: 16),
+              _buildLegendaItem(
+                  color: bluePalette[2], label: 'Não Recorrentes'),
+            ],
+          ),
+        ),
+        // Gráfico de Pizza
+        SizedBox(
+          height: 220,
+          child: PieChart(
+            PieChartData(
+              sections: pieSectionsDespesas,
+              sectionsSpace: 2,
+              centerSpaceRadius: 40,
             ),
+            swapAnimationDuration: const Duration(milliseconds: 500),
+            swapAnimationCurve: Curves.easeInOut,
+          ),
+        ),
+      ],
     );
   }
 
