@@ -137,3 +137,32 @@ def total_despesas_periodo(
 
     resultados.sort(key=lambda x: (x["ano"], x["mes"]))
     return resultados
+
+@router.get("/total-receitas-recorrencia")
+def total_receitas_recorrencia(
+    id_login: str = Query(...),
+    mes: int = Query(..., ge=1, le=12),
+    ano: int = Query(..., ge=1900),
+    db: Session = Depends(get_db)
+):
+    data_referencia = date(ano, mes, 1)
+    receitas = db.query(Receitas).filter(Receitas.id_login == id_login).all()
+
+    recorrentes = 0
+    nao_recorrentes = 0
+
+    for r in receitas:
+        data_base = r.data_recebimento.replace(day=1)
+        fim = r.fim_recorrencia.replace(day=1) if r.fim_recorrencia else None
+
+        if not r.recorrencia and data_base == data_referencia:
+            nao_recorrentes += 1
+        elif r.recorrencia and (data_referencia >= data_base and (fim is None or data_referencia <= fim)):
+            recorrentes += 1
+
+    return {
+        "mes": data_referencia.month,
+        "ano": data_referencia.year,
+        "recorrentes": recorrentes,
+        "nao_recorrentes": nao_recorrentes
+    }

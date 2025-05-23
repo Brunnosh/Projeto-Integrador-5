@@ -17,9 +17,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   late String selectedMonth, selectedYear;
   late List<String> years;
   double saldo = 0.0;
+  int receitasRecorrentes = 0;
+  int receitasNaoRecorrentes = 0;
 
   List<BarChartGroupData> barGroups = [];
   List<PieChartSectionData> pieSections = [];
+  List<PieChartSectionData> pieSectionsReceitas = [];
   List<FlSpot> receitaSpots = [];
   List<String> receitaLabels = [];
   List<FlSpot> despesaSpots = [];
@@ -30,6 +33,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _despesasCategoriaUrl = '';
   String _receitasPorMesUrl = '';
   String _despesasPorMesUrl = '';
+  String _receitasRecorrenciaUrl = '';
 
   final List<Color> bluePalette = [
     Color(0xFF56CCF2), // azul claro
@@ -65,12 +69,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _despesasCategoriaUrl = '$baseUrl/contagem-despesas-por-categoria';
       _receitasPorMesUrl = '$baseUrl/total-receitas-periodo';
       _despesasPorMesUrl = '$baseUrl/total-despesas-periodo';
+      _receitasRecorrenciaUrl = '$baseUrl/total-receitas-recorrencia';
     });
     await _loadDespesasPorDiaVencimento();
     await _loadDespesasPorCategoria();
     await _loadReceitasPorPeriodo();
     await _loadDespesasPorPeriodo();
     await _loadSaldoPorPeriodo();
+    await _loadReceitasRecorrencia();
   }
 
   @override
@@ -181,7 +187,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ],
               ),
             ),
-            badgePositionPercentageOffset: 1.0,
+            // badgePositionPercentageOffset: 1.0,
             showTitle: false,
           );
         }).toList();
@@ -278,6 +284,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
     for (int i = 0; i < receitaSpots.length; i++) {
       final double saldo = receitaSpots[i].y - despesaSpots[i].y;
       saldoSpots.add(FlSpot(i.toDouble(), saldo));
+    }
+  }
+
+  Future<void> _loadReceitasRecorrencia() async {
+    final url = Uri.parse(
+        '$_receitasRecorrenciaUrl?id_login=${widget.idLogin}&mes=${monthToNumber[selectedMonth]}&ano=$selectedYear');
+
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> data = json.decode(response.body);
+
+      setState(() {
+        receitasRecorrentes = data['recorrentes'] ?? 0;
+        receitasNaoRecorrentes = data['nao_recorrentes'] ?? 0;
+        final total = receitasRecorrentes + receitasNaoRecorrentes;
+        if (total == 0) {
+          pieSectionsReceitas = [];
+          return;
+        }
+
+        pieSectionsReceitas = [
+          PieChartSectionData(
+            value: receitasRecorrentes.toDouble(),
+            title:
+                'Recorrentes\n${(receitasRecorrentes / total * 100).toStringAsFixed(1)}%',
+            color: bluePalette[1],
+            radius: 60,
+            titleStyle: const TextStyle(
+                fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black),
+          ),
+          PieChartSectionData(
+            value: receitasNaoRecorrentes.toDouble(),
+            title:
+                'Não Recorrentes\n${(receitasNaoRecorrentes / total * 100).toStringAsFixed(1)}%',
+            color: bluePalette[3],
+            radius: 60,
+            titleStyle: const TextStyle(
+                fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black),
+          ),
+        ];
+      });
+    } else {
+      print('Erro ao carregar receitas recorrentes');
     }
   }
 
@@ -515,6 +565,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Widget _buildPieReceitasRecorrencia() {
+    return SizedBox(
+      height: 220,
+      child: pieSectionsReceitas.isEmpty
+          ? const Center(child: Text('Nenhum dado disponível'))
+          : PieChart(
+              PieChartData(
+                sections: pieSectionsReceitas,
+                sectionsSpace: 2,
+                centerSpaceRadius: 40,
+              ),
+              swapAnimationDuration: const Duration(milliseconds: 500),
+              swapAnimationCurve: Curves.easeInOut,
+            ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -546,7 +613,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           },
                           itemBuilder: (item) => item,
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 16),
                         _buildDropdown<String>(
                           label: 'Ano',
                           value: selectedYear,
@@ -584,6 +651,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 SizedBox(height: 12),
                 _buildComparativoReceitaDespesaChart(),
+                // Gráfico Receitas Recorrentes x Não Recorrentes
+                const SizedBox(height: 24),
+                const Text(
+                  'Receitas Recorrentes x Não Recorrentes',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 12),
+                _buildPieReceitasRecorrencia()
               ],
             ),
           )),
