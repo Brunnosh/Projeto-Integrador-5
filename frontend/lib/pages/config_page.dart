@@ -57,6 +57,19 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
     return null;
   }
 
+  String _formatarData(String data) {
+    try {
+      final partes = data.split('-');
+      final ano = int.parse(partes[0]);
+      final mes = int.parse(partes[1]);
+      final dia = int.parse(partes[2]);
+      final dataFormatada = DateTime(ano, mes, dia);
+      return DateFormat('dd/MM/yyyy').format(dataFormatada);
+    } catch (_) {
+      return data;
+    }
+  }
+
   void _inicializarControllers() {
     final endereco = widget.dadosUsuario['endereco'] ?? {};
     _cepController.text = endereco['cep'] ?? '';
@@ -548,7 +561,8 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
                             const Icon(Icons.cake, color: Colors.blue),
                             const SizedBox(width: 8),
                             Text(
-                              widget.dadosUsuario['data_nascimento'],
+                              _formatarData(
+                                  widget.dadosUsuario['data_nascimento']),
                               style: const TextStyle(fontSize: 16),
                             ),
                           ],
@@ -558,8 +572,20 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
                           onPressed: () {
                             setState(() {
                               _editandoNascimento = true;
-                              _dateController.text =
-                                  widget.dadosUsuario['data_nascimento'];
+                              try {
+                                final partes = widget
+                                    .dadosUsuario['data_nascimento']
+                                    .split('-');
+                                final ano = int.parse(partes[0]);
+                                final mes = int.parse(partes[1]);
+                                final dia = int.parse(partes[2]);
+                                _selectedDate = DateTime(ano, mes, dia);
+                                _dateController.text = DateFormat('dd/MM/yyyy')
+                                    .format(_selectedDate!);
+                              } catch (_) {
+                                _dateController.text = '';
+                                _selectedDate = null;
+                              }
                             });
                           },
                         ),
