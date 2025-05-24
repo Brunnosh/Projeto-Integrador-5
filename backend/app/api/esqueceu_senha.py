@@ -34,12 +34,13 @@ def esqueci_senha(dados: EsqueciSenhaRequest, db: Session = Depends(get_db)):
     token = gerar_token_reset(usuario.email)
 
 
-    link_redefinicao = f"http://localhost:8000/static/reset_password.html?token={token}"
+    # link_redefinicao = f"http://localhost:8000/static/reset_password.html?token={token}"
+    link_redefinicao = f"http://10.0.2.2:8000/static/reset_password.html?token={token}"
 
     corpo_email = f"""
     Olá,
 
-    Recebemos uma solicitação para redefinir sua senha.
+    Recebemos uma solicitação para redefinir sua senha do MyWallet.
 
     Clique no link abaixo para continuar:
     {link_redefinicao}

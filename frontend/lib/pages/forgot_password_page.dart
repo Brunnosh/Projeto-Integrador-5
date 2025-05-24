@@ -52,7 +52,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Email com detalhes enviado para seu email'),
+              content: Text(
+                  'Se o e-mail estiver cadastrado, você receberá um link para redefinir a senha.'),
             ),
           );
           await Future.delayed(const Duration(seconds: 1));
@@ -111,7 +112,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   return null;
                 },
                 decoration: InputDecoration(
-                  hintText: 'exemplo@email.com',
+                  hintText: 'E-mail',
                   filled: true,
                   fillColor: Colors.blue.shade50,
                   border: OutlineInputBorder(
