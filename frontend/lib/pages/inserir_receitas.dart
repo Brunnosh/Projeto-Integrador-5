@@ -249,12 +249,7 @@ class _InserirReceitaPageState extends State<InserirReceitaPage> {
                 _valorController,
                 keyboardType: TextInputType.number,
                 inputFormatters: [
-                  MoneyInputFormatter(
-                    thousandSeparator: ThousandSeparator.Period,
-                    mantissaLength: 2,
-                    trailingSymbol: '',
-                    leadingSymbol: 'R\$ ',
-                  )
+                  CurrencyInputFormatter(),
                 ],
               ),
               const SizedBox(height: 12),
@@ -314,6 +309,39 @@ class DateInputFormatter extends TextInputFormatter {
     return TextEditingValue(
       text: buffer.toString(),
       selection: TextSelection.collapsed(offset: buffer.length),
+    );
+  }
+}
+
+class CurrencyInputFormatter extends TextInputFormatter {
+  final NumberFormat currencyFormat = NumberFormat.currency(
+    locale: 'pt_BR',
+    symbol: 'R\$ ',
+    decimalDigits: 2,
+  );
+
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    String digitsOnly = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (digitsOnly.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+
+    // Parse o número como inteiro (sem casas decimais)
+    int value = int.parse(digitsOnly);
+
+    // Divide por 100 para colocar as duas últimas casas como decimais
+    double doubleValue = value / 100;
+
+    // Formata para moeda brasileira
+    final newText = currencyFormat.format(doubleValue);
+
+    // Mantém o cursor no fim do texto formatado
+    return TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: newText.length),
     );
   }
 }
