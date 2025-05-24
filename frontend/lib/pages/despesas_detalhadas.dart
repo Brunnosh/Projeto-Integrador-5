@@ -219,7 +219,6 @@ class _DespesasDetalhadasPageState extends State<DespesasDetalhadasPage> {
     final valor = despesa['valor'] ?? 0.0;
     final categoria = despesa['id_categoria'] ?? '';
     final recorrente = despesa['recorrencia'] ?? false;
-    final fimRecorrencia = despesa['fim_recorrencia'] ?? 'Indeterminado';
     final idDespesa = despesa['id'];
 
     final currencyFormat =
@@ -228,6 +227,17 @@ class _DespesasDetalhadasPageState extends State<DespesasDetalhadasPage> {
 
     final original = despesa['data_vencimento'] ?? '';
     String dataVencimento;
+
+    String fimRecorrenciaFormatada = 'Indeterminado';
+    if (despesa['fim_recorrencia'] != null) {
+      try {
+        final parsedFim = DateTime.parse(despesa['fim_recorrencia']);
+        fimRecorrenciaFormatada =
+            '${parsedFim.day.toString().padLeft(2, '0')}/${parsedFim.month.toString().padLeft(2, '0')}/${parsedFim.year}';
+      } catch (_) {
+        fimRecorrenciaFormatada = despesa['fim_recorrencia'];
+      }
+    }
 
     try {
       final parsedDate = DateTime.parse(original);
@@ -291,7 +301,8 @@ class _DespesasDetalhadasPageState extends State<DespesasDetalhadasPage> {
             ),
             const SizedBox(height: 4),
             Text('Recorrente: ${recorrente ? "Sim" : "Não"}'),
-            if (recorrente) Text('Fim da recorrência: $fimRecorrencia'),
+            if (recorrente)
+              Text('Fim da recorrência: $fimRecorrenciaFormatada'),
             const SizedBox(height: 4),
             Text('Categoria: ${_nomeCategoriaPorId(categoria)}'),
             const SizedBox(height: 8),

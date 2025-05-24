@@ -178,7 +178,6 @@ class _ReceitasDetalhadasPageState extends State<ReceitasDetalhadasPage> {
     final descricao = receita['descricao'] ?? '';
     final valor = receita['valor'] ?? 0.0;
     final recorrente = receita['recorrencia'] ?? true;
-    final fimRecorrencia = receita['fim_recorrencia'] ?? 'Indeterminado';
     final idReceita = receita['id'];
 
     final currencyFormat =
@@ -187,6 +186,17 @@ class _ReceitasDetalhadasPageState extends State<ReceitasDetalhadasPage> {
 
     final original = receita['data_recebimento'] ?? '';
     String dataRecebimento;
+
+    String fimRecorrenciaFormatada = 'Indeterminado';
+    if (receita['fim_recorrencia'] != null) {
+      try {
+        final parsedFim = DateTime.parse(receita['fim_recorrencia']);
+        fimRecorrenciaFormatada =
+            '${parsedFim.day.toString().padLeft(2, '0')}/${parsedFim.month.toString().padLeft(2, '0')}/${parsedFim.year}';
+      } catch (_) {
+        fimRecorrenciaFormatada = receita['fim_recorrencia'];
+      }
+    }
 
     try {
       final parsedDate = DateTime.parse(original);
@@ -250,7 +260,8 @@ class _ReceitasDetalhadasPageState extends State<ReceitasDetalhadasPage> {
             ),
             const SizedBox(height: 4),
             Text('Recorrente: ${recorrente ? "Sim" : "Não"}'),
-            if (recorrente) Text('Fim da recorrência: $fimRecorrencia'),
+            if (recorrente)
+              Text('Fim da recorrência: $fimRecorrenciaFormatada'),
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,

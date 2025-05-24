@@ -119,6 +119,13 @@ class _EditReceitaPageState extends State<EditReceitaPage> {
       _selectedDate = _parseDate(_dataRecebimentoController.text);
       if (_recorrente && _fimRecorrenciaController.text.isNotEmpty) {
         _fimRecorrencia = _parseDate(_fimRecorrenciaController.text);
+
+        if (_fimRecorrencia!.isBefore(_selectedDate!) ||
+            _fimRecorrencia!.isAtSameMomentAs(_selectedDate!)) {
+          _showSnackbar(
+              "A data de fim da recorrência deve ser posterior à data de vencimento.");
+          return;
+        }
       }
     } catch (_) {
       _showSnackbar("Datas inválidas.");
