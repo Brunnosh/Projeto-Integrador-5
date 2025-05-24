@@ -85,7 +85,12 @@ class _EditReceitaPageState extends State<EditReceitaPage> {
         final data = json.decode(utf8.decode(response.bodyBytes));
         setState(() {
           _descricaoController.text = data['descricao'] ?? '';
-          _valorController.text = data['valor']?.toString() ?? '';
+
+          final valor = data['valor'];
+          _valorController.text = valor != null
+              ? NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$')
+                  .format(valor)
+              : '';
 
           _selectedDate = DateTime.tryParse(data['data_recebimento'] ?? '');
           _dataRecebimentoController.text =
