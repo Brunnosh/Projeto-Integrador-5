@@ -17,32 +17,53 @@ samples, guidance on mobile development, and a full API reference.
 
 
 
-## Como Emular Um Celular 
+## Como Emular um Celular
 
-este passo a passo leva em consideração o ambiante flutter esta todo atualizado em sua maquina 
+Este guia pressupõe que seu ambiente Flutter esteja completamente atualizado em sua máquina.
 
-- Passo 1 ->  Requisitos para emulular
+---
 
-descubra oq fazlta no seu ambiente flutter digitando flutter doctor no terminal 
+### Passo 1: Requisitos para Emular
 
-*é necessário ter o android estudio baixado em sua maquina
+Para verificar o que falta em seu ambiente Flutter, digite no terminal:
 
-*É necessário ter criado um device no minimo api 29 (pode ser criado direto do terminal)
+```bash
+flutter doctor
+```
 
-- Passo 2 ->  verificação de device
+* É **necessário** ter o Android Studio baixado em sua máquina.
+* É **necessário** ter criado um dispositivo virtual (AVD) com, no mínimo, a API 29. Isso pode ser feito diretamente pelo terminal ou pelo Android Studio.
 
-no terminal da raiz do projeto na pasta frontend digite (flutter emulator)
-este comando vai verificar os dispositivos para emulação 
-seu device mobile criado no android studio deve aparecer aqui 
+---
 
+### Passo 2: Verificação do Dispositivo
 
-- Passo 3 -> Escolha um device 
+No terminal, a partir da pasta raiz do seu projeto, digite:
 
-no terminal digite (flutter emulators --launch <emulator id>)
-ele vai abrir o emulador do device mobile
-aparecerá uma mensagen pedindo autorização, clique em "alow"
+ ```bash
+flutter emulators
+```
+Este comando listará os dispositivos disponíveis para emulação. 
+Seu dispositivo móvel criado no Android Studio deverá aparecer aqui.
 
-- Passo 4  - Rodando aplicação nmo emulador
+---
 
-agora basta apenas digitar (flutter run) e deverá rodar o app no emulador
+### Passo 3: Escolha um Dispositivo
 
+No terminal, digite:
+
+```bash
+flutter emulators --launch
+```
+O emulador do dispositivo móvel será aberto e uma mensagem de autorização irá aparecer; clique em "**Allow**".
+
+---
+
+### Passo 4: Rodando a Aplicação no Emulador
+
+Agora, basta digitar`flutter run` no terminal:
+
+```bash
+flutter run
+```
+ Seu aplicativo deverá ser executado no emulador.
