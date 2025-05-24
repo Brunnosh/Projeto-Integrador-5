@@ -16,8 +16,14 @@ class DespesasDetalhadasPage extends StatefulWidget {
 class _DespesasDetalhadasPageState extends State<DespesasDetalhadasPage> {
   late String selectedMonth, selectedYear;
   late List<String> years;
+
+  int? _idCategoriaSelecionada;
+
   List<Map<String, dynamic>> despesas = [];
+  List<Map<String, dynamic>> _categorias = [];
+
   String _despesasUrl = '';
+  String _categoriasUrl = '';
 
   final Map<String, int> monthToNumber = {
     'Janeiro': 1,
@@ -33,6 +39,19 @@ class _DespesasDetalhadasPageState extends State<DespesasDetalhadasPage> {
     'Novembro': 11,
     'Dezembro': 12,
   };
+
+  void _showSnackbar(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  String _nomeCategoriaPorId(int? idCategoria) {
+    final categoria = _categorias.firstWhere(
+      (cat) => cat['id'] == idCategoria,
+      orElse: () => {'nome': 'Categoria não encontrada'},
+    );
+    return categoria['nome'];
+  }
 
   @override
   void initState() {
@@ -65,8 +84,29 @@ class _DespesasDetalhadasPageState extends State<DespesasDetalhadasPage> {
         isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
     setState(() {
       _despesasUrl = '$baseUrl/detalhes-despesas';
+      _categoriasUrl = '$baseUrl/categoria';
     });
-    _loadDespesas();
+    await _loadDespesas();
+    await _carregarCategorias();
+  }
+
+  Future<void> _carregarCategorias() async {
+    try {
+      final response = await http.get(Uri.parse(_categoriasUrl));
+      if (response.statusCode == 200) {
+        final List data = json.decode(utf8.decode(response.bodyBytes));
+        setState(() {
+          _categorias = data.cast<Map<String, dynamic>>();
+          if (_categorias.isNotEmpty) {
+            _idCategoriaSelecionada = _categorias[0]['id'];
+          }
+        });
+      } else {
+        _showSnackbar('Erro ao carregar categorias');
+      }
+    } catch (e) {
+      _showSnackbar('Erro: $e');
+    }
   }
 
   Future<void> _loadDespesas() async {
@@ -177,6 +217,7 @@ class _DespesasDetalhadasPageState extends State<DespesasDetalhadasPage> {
   Widget _buildDespesaTile(Map<String, dynamic> despesa) {
     final descricao = despesa['descricao'] ?? '';
     final valor = despesa['valor'] ?? 0.0;
+    final categoria = despesa['id_categoria'] ?? '';
     final recorrente = despesa['recorrencia'] ?? false;
     final fimRecorrencia = despesa['fim_recorrencia'] ?? 'Indeterminado';
     final idDespesa = despesa['id'];
@@ -251,6 +292,8 @@ class _DespesasDetalhadasPageState extends State<DespesasDetalhadasPage> {
             const SizedBox(height: 4),
             Text('Recorrente: ${recorrente ? "Sim" : "Não"}'),
             if (recorrente) Text('Fim da recorrência: $fimRecorrencia'),
+            const SizedBox(height: 4),
+            Text('Categoria: ${_nomeCategoriaPorId(categoria)}'),
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
