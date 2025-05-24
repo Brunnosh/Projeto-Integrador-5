@@ -4,7 +4,6 @@ import '../utils/environment.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:frontend/pages/config_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_multi_formatter/formatters/money_input_enums.dart';
 import 'package:flutter_multi_formatter/formatters/money_input_formatter.dart';
@@ -34,6 +33,10 @@ class _EditDespesaPageState extends State<EditDespesaPage> {
 
   DateTime _parseDate(String input) {
     return DateFormat('dd/MM/yyyy').parseStrict(input);
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 
   void _showSnackbar(String message) {
@@ -105,10 +108,19 @@ class _EditDespesaPageState extends State<EditDespesaPage> {
         setState(() {
           _descricaoController.text = data['descricao'] ?? '';
           _valorController.text = data['valor']?.toString() ?? '';
-          _selectedDate = DateTime.parse(data['data_vencimento']);
+
+          _selectedDate = DateTime.tryParse(data['data_vencimento'] ?? '');
+          _dataVencimentoController.text =
+              _selectedDate != null ? _formatDate(_selectedDate!) : '';
+
           _recorrente = data['recorrencia'] ?? false;
           if (data['fim_recorrencia'] != null) {
             _fimRecorrencia = DateTime.tryParse(data['fim_recorrencia']);
+            _fimRecorrenciaController.text =
+                _fimRecorrencia != null ? _formatDate(_fimRecorrencia!) : '';
+          } else {
+            _fimRecorrencia = null;
+            _fimRecorrenciaController.clear();
           }
           _idCategoriaSelecionada = data['id_categoria'];
         });

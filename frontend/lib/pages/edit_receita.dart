@@ -28,10 +28,13 @@ class _EditReceitaPageState extends State<EditReceitaPage> {
   DateTime? _fimRecorrencia;
   bool _recorrente = false;
   int? _receitaId;
-  // int _currentStep = 0;
 
   DateTime _parseDate(String input) {
     return DateFormat('dd/MM/yyyy').parseStrict(input);
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 
   void _showSnackbar(String message) {
@@ -83,10 +86,19 @@ class _EditReceitaPageState extends State<EditReceitaPage> {
         setState(() {
           _descricaoController.text = data['descricao'] ?? '';
           _valorController.text = data['valor']?.toString() ?? '';
-          _selectedDate = DateTime.parse(data['data_recebimento']);
+
+          _selectedDate = DateTime.tryParse(data['data_recebimento'] ?? '');
+          _dataRecebimentoController.text =
+              _selectedDate != null ? _formatDate(_selectedDate!) : '';
+
           _recorrente = data['recorrencia'] ?? false;
           if (data['fim_recorrencia'] != null) {
             _fimRecorrencia = DateTime.tryParse(data['fim_recorrencia']);
+            _fimRecorrenciaController.text =
+                _fimRecorrencia != null ? _formatDate(_fimRecorrencia!) : '';
+          } else {
+            _fimRecorrencia = null;
+            _fimRecorrenciaController.clear();
           }
         });
       } else {
