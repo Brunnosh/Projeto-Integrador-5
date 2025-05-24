@@ -139,24 +139,113 @@ class _DespesasDetalhadasPageState extends State<DespesasDetalhadasPage> {
     }
   }
 
-  Future<void> _deletarDespesa(int idDespesa) async {
+  // Future<void> _deletarDespesa(int idDespesa) async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   final token = prefs.getString('access_token');
+  //   final userId = prefs.getString('userId');
+
+  //   print('Deletando despesa $idDespesa com id_login: $userId');
+
+  //   if (token == null || userId == null) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(content: Text('Usuário não autenticado')),
+  //     );
+  //     return;
+  //   }
+
+  //   final isEmulator = await isRunningOnEmulator();
+  //   final baseUrl =
+  //       isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
+  //   final url = '$baseUrl/delete-despesa/$idDespesa?id_login=$userId';
+
+  //   try {
+  //     final response = await http.delete(
+  //       Uri.parse(url),
+  //       headers: {'Authorization': 'Bearer $token'},
+  //     );
+
+  //     if (response.statusCode == 200 || response.statusCode == 204) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         const SnackBar(content: Text('Despesa excluída com sucesso')),
+  //       );
+  //       _loadDespesas(); // recarrega a lista
+  //       Future.delayed(const Duration(seconds: 1), () {
+  //         if (mounted) Navigator.pop(context);
+  //       });
+  //     } else {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         const SnackBar(content: Text('Erro ao excluir despesa')),
+  //       );
+  //     }
+  //   } catch (e) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(content: Text('Erro de conexão ao excluir despesa')),
+  //     );
+  //   }
+  // }
+
+  Future<Map<String, dynamic>?> _obterDetalhesDespesa(int idDespesa) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access_token');
     final userId = prefs.getString('userId');
 
-    print('Deletando despesa $idDespesa com id_login: $userId');
+    final isEmulator = await isRunningOnEmulator();
+    final baseUrl =
+        isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
+    final url = '$baseUrl/unica-despesa/$idDespesa?id_login=$userId';
 
-    if (token == null || userId == null) {
+    try {
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return null;
+      }
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<void> _deletarDespesa(int idDespesa) async {
+    final despesa = await _obterDetalhesDespesa(idDespesa);
+
+    if (despesa == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Usuário não autenticado')),
+        const SnackBar(content: Text('Erro ao carregar detalhes da despesa')),
       );
       return;
     }
 
+    final bool recorrente = despesa['recorrencia'] ?? false;
+
+    if (!recorrente) {
+      await _confirmarEDeletar(idDespesa);
+      return;
+    }
+
+    final escolha = await showDialog<String>(
+      context: context,
+      builder: (context) => const RecorrenciaDeleteDialog(),
+    );
+    if (escolha == 'total') {
+      await _confirmarEDeletar(idDespesa);
+    } else if (escolha == 'parcial') {
+      await _encerrarRecorrencia(idDespesa);
+    }
+  }
+
+  Future<void> _confirmarEDeletar(int idDespesa) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+
     final isEmulator = await isRunningOnEmulator();
     final baseUrl =
         isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
-    final url = '$baseUrl/delete-despesa/$idDespesa?id_login=$userId';
+    final url = '$baseUrl/delete-despesa/$idDespesa';
 
     try {
       final response = await http.delete(
@@ -168,7 +257,7 @@ class _DespesasDetalhadasPageState extends State<DespesasDetalhadasPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Despesa excluída com sucesso')),
         );
-        _loadDespesas(); // recarrega a lista
+        _loadDespesas();
         Future.delayed(const Duration(seconds: 1), () {
           if (mounted) Navigator.pop(context);
         });
@@ -180,6 +269,75 @@ class _DespesasDetalhadasPageState extends State<DespesasDetalhadasPage> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Erro de conexão ao excluir despesa')),
+      );
+    }
+  }
+
+  Future<void> _encerrarRecorrencia(int idDespesa) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+    final idLogin = prefs.getString('userId');
+
+    final isEmulator = await isRunningOnEmulator();
+    final baseUrl =
+        isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
+
+    final getUrl = '$baseUrl/unica-despesa/$idDespesa?id_login=$idLogin';
+    final putUrl = '$baseUrl/fim-recorrencia-despesa/$idDespesa';
+
+    try {
+      final getResponse = await http.get(
+        Uri.parse(getUrl),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (getResponse.statusCode != 200) {
+        throw Exception("Erro ao buscar despesa para edição");
+      }
+
+      final data = jsonDecode(utf8.decode(getResponse.bodyBytes));
+      final dataVencimento = DateTime.parse(data["data_vencimento"]);
+
+      final int selectedMonthNum = monthToNumber[selectedMonth]!;
+      final int selectedYearNum = int.parse(selectedYear);
+
+      int anoFim =
+          selectedMonthNum == 1 ? selectedYearNum - 1 : selectedYearNum;
+      int mesFim = selectedMonthNum == 1 ? 12 : selectedMonthNum - 1;
+
+      int diaFim = dataVencimento.day;
+
+      final ultimoDiaMes = DateTime(anoFim, mesFim + 1, 0).day;
+      if (diaFim > ultimoDiaMes) diaFim = ultimoDiaMes;
+
+      final fimRecorrencia = DateTime(anoFim, mesFim, diaFim);
+
+      final body = {
+        "fim_recorrencia": fimRecorrencia.toIso8601String(),
+      };
+
+      final putResponse = await http.put(
+        Uri.parse(putUrl),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(body),
+      );
+
+      if (putResponse.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Recorrência encerrada com sucesso')),
+        );
+        _loadDespesas();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro: ${putResponse.body}')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro de conexão: $e')),
       );
     }
   }
@@ -372,7 +530,7 @@ class _DespesasDetalhadasPageState extends State<DespesasDetalhadasPage> {
             const SizedBox(height: 20),
             Expanded(
               child: despesas.isEmpty
-                  ? const Center(child: Text('Nenhuma receita encontrada.'))
+                  ? const Center(child: Text('Nenhuma despesa encontrada.'))
                   : ListView.builder(
                       itemCount: despesas.length,
                       itemBuilder: (context, index) {
@@ -383,6 +541,70 @@ class _DespesasDetalhadasPageState extends State<DespesasDetalhadasPage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class RecorrenciaDeleteDialog extends StatelessWidget {
+  const RecorrenciaDeleteDialog({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Row(
+        children: const [
+          Icon(Icons.info_outline, color: Colors.blue),
+          SizedBox(width: 8),
+          Text('Despesa recorrente'),
+        ],
+      ),
+      content: const Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(
+              text: 'Deseja excluir:\n\n',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            TextSpan(text: '• Apenas os registros deste mês em diante.\n'),
+            TextSpan(text: '• Todos os registros, inclusive meses anteriores?'),
+          ],
+        ),
+      ),
+      actions: [
+        Center(
+          child: Wrap(
+            spacing: 12,
+            alignment: WrapAlignment.center,
+            children: [
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, 'parcial'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue, // fundo azul
+                  foregroundColor: Colors.white, // texto branco
+                ),
+                child: const Text('Deste mês em diante'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, 'total'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Excluir todos'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Cancelar'),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

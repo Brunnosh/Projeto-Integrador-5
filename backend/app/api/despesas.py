@@ -5,6 +5,7 @@ from sqlalchemy import extract
 from app.db import SessionLocal
 from app.models.despesas import Despesas
 from app.schemas.despesas import DespesasCreate
+from app.schemas.update_fimRecorrencia import FimRecorrenciaUpdate
 
 router = APIRouter()
 
@@ -101,20 +102,37 @@ def despesas_detalhadas(id_login: str, mes: int, ano: int, db: Session = Depends
     return resultado
 
 @router.delete("/delete-despesa/{id}")
-def deletar_despesa(id: int, id_login: str, db: Session = Depends(get_db)):
+def deletar_despesa(id: int, db: Session = Depends(get_db)):
     despesa = db.query(Despesas).filter(Despesas.id == id).first()
 
     if not despesa:
         raise HTTPException(status_code=404, detail="Despesa não encontrada")
-
-    if str(despesa.id_login).strip() != str(id_login).strip():
-        raise HTTPException(status_code=403, detail="Você não tem permissão para excluir esta despesa.")
 
     db.delete(despesa)
     db.commit()
 
     return {"mensagem": "Despesa excluída com sucesso", "id_despesa": id}
 
+@router.put("/fim-recorrencia-despesa/{id}")
+def encerrar_recorrencia_despesa(
+    id: int,
+    dados: FimRecorrenciaUpdate,
+    db: Session = Depends(get_db)
+):
+    despesa = db.query(Despesas).filter(Despesas.id == id).first()
+
+    if not despesa:
+        raise HTTPException(status_code=404, detail="Despesa não encontrada")
+
+    despesa.fim_recorrencia = dados.fim_recorrencia
+
+    db.commit()
+    db.refresh(despesa)
+
+    return {
+        "mensagem": "Fim da recorrência atualizado com sucesso",
+        "id_despesa": despesa.id
+    }
 
 @router.put("/update-despesa/{id}")
 def atualizar_despesa(

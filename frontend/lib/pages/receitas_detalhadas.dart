@@ -16,7 +16,9 @@ class ReceitasDetalhadasPage extends StatefulWidget {
 class _ReceitasDetalhadasPageState extends State<ReceitasDetalhadasPage> {
   late String selectedMonth, selectedYear;
   late List<String> years;
+
   List<Map<String, dynamic>> receitas = [];
+
   String _receitasUrl = '';
 
   final Map<String, int> monthToNumber = {
@@ -99,24 +101,68 @@ class _ReceitasDetalhadasPageState extends State<ReceitasDetalhadasPage> {
     }
   }
 
-  Future<void> _deletarReceita(int idreceita) async {
+  Future<Map<String, dynamic>?> _obterDetalhesReceita(int idReceita) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access_token');
     final userId = prefs.getString('userId');
 
-    print('Deletando receita $idreceita com id_login: $userId');
+    final isEmulator = await isRunningOnEmulator();
+    final baseUrl =
+        isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
+    final url = '$baseUrl/unica-receita/$idReceita?id_login=$userId';
 
-    if (token == null || userId == null) {
+    try {
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return null;
+      }
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<void> _deletarReceita(int idReceita) async {
+    final receita = await _obterDetalhesReceita(idReceita);
+
+    if (receita == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Usuário não autenticado')),
+        const SnackBar(content: Text('Erro ao carregar detalhes da receita')),
       );
       return;
     }
 
+    final bool recorrente = receita['recorrencia'] ?? false;
+
+    if (!recorrente) {
+      await _confirmarEDeletar(idReceita);
+      return;
+    }
+
+    final escolha = await showDialog<String>(
+      context: context,
+      builder: (context) => const RecorrenciaDeleteDialog(),
+    );
+    if (escolha == 'total') {
+      await _confirmarEDeletar(idReceita);
+    } else if (escolha == 'parcial') {
+      await _encerrarRecorrencia(idReceita);
+    }
+  }
+
+  Future<void> _confirmarEDeletar(int idReceita) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+
     final isEmulator = await isRunningOnEmulator();
     final baseUrl =
         isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
-    final url = '$baseUrl/delete-receita/$idreceita?id_login=$userId';
+    final url = '$baseUrl/delete-receita/$idReceita';
 
     try {
       final response = await http.delete(
@@ -128,7 +174,7 @@ class _ReceitasDetalhadasPageState extends State<ReceitasDetalhadasPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Receita excluída com sucesso')),
         );
-        _loadReceitas(); // recarrega a lista
+        _loadReceitas();
         Future.delayed(const Duration(seconds: 1), () {
           if (mounted) Navigator.pop(context);
         });
@@ -140,6 +186,76 @@ class _ReceitasDetalhadasPageState extends State<ReceitasDetalhadasPage> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Erro de conexão ao excluir receita')),
+      );
+    }
+  }
+
+  Future<void> _encerrarRecorrencia(int idReceita) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+    final idLogin = prefs.getString('userId');
+
+    final isEmulator = await isRunningOnEmulator();
+    final baseUrl =
+        isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
+
+    final getUrl = '$baseUrl/unica-receita/$idReceita?id_login=$idLogin';
+    final putUrl = '$baseUrl/fim-recorrencia-receita/$idReceita';
+
+    try {
+      // Buscar a receita para pegar a data_recebimento
+      final getResponse = await http.get(
+        Uri.parse(getUrl),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (getResponse.statusCode != 200) {
+        throw Exception("Erro ao buscar receita para edição");
+      }
+
+      final data = jsonDecode(utf8.decode(getResponse.bodyBytes));
+      final dataRecebimento = DateTime.parse(data["data_recebimento"]);
+
+      final int selectedMonthNum = monthToNumber[selectedMonth]!;
+      final int selectedYearNum = int.parse(selectedYear);
+
+      int anoFim =
+          selectedMonthNum == 1 ? selectedYearNum - 1 : selectedYearNum;
+      int mesFim = selectedMonthNum == 1 ? 12 : selectedMonthNum - 1;
+
+      int diaFim = dataRecebimento.day;
+
+      final ultimoDiaMes = DateTime(anoFim, mesFim + 1, 0).day;
+      if (diaFim > ultimoDiaMes) diaFim = ultimoDiaMes;
+
+      final fimRecorrencia = DateTime(anoFim, mesFim, diaFim);
+
+      final body = {
+        "fim_recorrencia": fimRecorrencia.toIso8601String(),
+      };
+
+      final putResponse = await http.put(
+        Uri.parse(putUrl),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(body),
+      );
+
+      if (putResponse.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Recorrência encerrada com sucesso')),
+        );
+        _loadReceitas();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro: ${putResponse.body}')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro de conexão: $e')),
       );
     }
   }
@@ -340,6 +456,70 @@ class _ReceitasDetalhadasPageState extends State<ReceitasDetalhadasPage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class RecorrenciaDeleteDialog extends StatelessWidget {
+  const RecorrenciaDeleteDialog({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Row(
+        children: const [
+          Icon(Icons.info_outline, color: Colors.blue),
+          SizedBox(width: 8),
+          Text('Receita recorrente'),
+        ],
+      ),
+      content: const Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(
+              text: 'Deseja excluir:\n\n',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            TextSpan(text: '• Apenas os registros deste mês em diante.\n'),
+            TextSpan(text: '• Todos os registros, inclusive meses anteriores?'),
+          ],
+        ),
+      ),
+      actions: [
+        Center(
+          child: Wrap(
+            spacing: 12,
+            alignment: WrapAlignment.center,
+            children: [
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, 'parcial'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue, // fundo azul
+                  foregroundColor: Colors.white, // texto branco
+                ),
+                child: const Text('Deste mês em diante'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, 'total'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Excluir todos'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Cancelar'),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
