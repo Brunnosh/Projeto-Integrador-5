@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
+import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:device_info_plus/device_info_plus.dart';
@@ -177,11 +178,16 @@ class _ReceitasDetalhadasPageState extends State<ReceitasDetalhadasPage> {
     final descricao = receita['descricao'] ?? '';
     final valor = receita['valor'] ?? 0.0;
     final recorrente = receita['recorrencia'] ?? true;
-    final fimRecorrencia = receita['fim_recorrencia'] ?? '-';
+    final fimRecorrencia = receita['fim_recorrencia'] ?? 'Indeterminado';
     final idReceita = receita['id'];
+
+    final currencyFormat =
+        NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+    final valorFormatado = currencyFormat.format(valor);
 
     final original = receita['data_recebimento'] ?? '';
     String dataRecebimento;
+
     try {
       final parsedDate = DateTime.parse(original);
       final dia = parsedDate.day;
@@ -201,48 +207,74 @@ class _ReceitasDetalhadasPageState extends State<ReceitasDetalhadasPage> {
     }
 
     return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      child: ListTile(
-        leading: Icon(Icons.attach_money, color: Colors.green),
-        title: Text(descricao),
-        subtitle: Column(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Recebido em: $dataRecebimento'),
+            Row(
+              children: [
+                const Icon(Icons.attach_money, color: Colors.green),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    descricao,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                Text(
+                  valorFormatado,
+                  style: const TextStyle(
+                    color: Colors.green,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(Icons.calendar_today, size: 16, color: Colors.grey),
+                const SizedBox(width: 4),
+                Text(
+                  'Recebido em: $dataRecebimento',
+                  style: const TextStyle(color: Colors.black54),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
             Text('Recorrente: ${recorrente ? "Sim" : "Não"}'),
             if (recorrente) Text('Fim da recorrência: $fimRecorrencia'),
-          ],
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'R\$ ${valor.toStringAsFixed(2)}',
-              style: const TextStyle(
-                color: Colors.green,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.edit, color: Colors.blue),
-              tooltip: 'Editar receita',
-              onPressed: () async {
-                await Navigator.pushNamed(
-                  context,
-                  '/edit-receita',
-                  arguments: {'id': idReceita},
-                );
-                _loadReceitas();
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.delete, color: Colors.red),
-              tooltip: 'Excluir receita',
-              onPressed: () {
-                _deletarReceita(idReceita);
-              },
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.edit, color: Colors.blue),
+                  tooltip: 'Editar Receita',
+                  onPressed: () async {
+                    await Navigator.pushNamed(
+                      context,
+                      '/edit-receita',
+                      arguments: {'id': idReceita},
+                    );
+                    _loadReceitas();
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  tooltip: 'Excluir Receita',
+                  onPressed: () {
+                    _deletarReceita(idReceita);
+                  },
+                ),
+              ],
             ),
           ],
         ),
