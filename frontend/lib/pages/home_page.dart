@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'dashboard.dart';
 import 'config_page.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:device_info_plus/device_info_plus.dart';
@@ -226,6 +227,10 @@ class _HomePageState extends State<HomePage> {
     IconData icon, {
     VoidCallback? onViewPressed,
   }) {
+    final currencyFormat =
+        NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+    final formattedValue = currencyFormat.format(value);
+
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -236,7 +241,7 @@ class _HomePageState extends State<HomePage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'R\$ ${value.toStringAsFixed(2)}',
+              formattedValue,
               style: TextStyle(
                 color: color,
                 fontWeight: FontWeight.bold,
@@ -295,7 +300,8 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('MyFinance'),
+        title: const Text('MyWallet'),
+        centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),

@@ -82,7 +82,7 @@ class _LoginPageState extends State<LoginPage> {
                     size: 64, color: Colors.blue),
                 const SizedBox(height: 16),
                 Text(
-                  'MyFinance',
+                  'MyWallet',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: Colors.blue[700],
