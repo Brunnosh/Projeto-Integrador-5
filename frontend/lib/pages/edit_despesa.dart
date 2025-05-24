@@ -5,8 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_multi_formatter/formatters/money_input_enums.dart';
-import 'package:flutter_multi_formatter/formatters/money_input_formatter.dart';
 
 String _despesasUrl = '';
 
@@ -145,14 +143,18 @@ class _EditDespesaPageState extends State<EditDespesaPage> {
 
     try {
       _selectedDate = _parseDate(_dataVencimentoController.text);
-      if (_recorrente && _fimRecorrenciaController.text.isNotEmpty) {
-        _fimRecorrencia = _parseDate(_fimRecorrenciaController.text);
+      if (_recorrente) {
+        if (_fimRecorrenciaController.text.trim().isEmpty) {
+          _fimRecorrencia = null;
+        } else {
+          _fimRecorrencia = _parseDate(_fimRecorrenciaController.text);
 
-        if (_fimRecorrencia!.isBefore(_selectedDate!) ||
-            _fimRecorrencia!.isAtSameMomentAs(_selectedDate!)) {
-          _showSnackbar(
-              "A data de fim da recorrência deve ser posterior à data de vencimento.");
-          return;
+          if (_fimRecorrencia!.isBefore(_selectedDate!) ||
+              _fimRecorrencia!.isAtSameMomentAs(_selectedDate!)) {
+            _showSnackbar(
+                "A data de fim da recorrência deve ser posterior à data de vencimento.");
+            return;
+          }
         }
       }
     } catch (_) {
