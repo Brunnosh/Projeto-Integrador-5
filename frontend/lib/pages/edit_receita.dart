@@ -310,7 +310,7 @@ class _EditReceitaPageState extends State<EditReceitaPage> {
               _buildTextField('Descrição *', _descricaoController),
               const SizedBox(height: 12),
               _buildDateField(
-                  'Data de Recebimento *', _dataRecebimentoController),
+                  'Primeiro Recebimento *', _dataRecebimentoController),
               const SizedBox(height: 12),
               _buildTextField(
                 'Valor *',
@@ -389,6 +389,72 @@ class CurrencyInputFormatter extends TextInputFormatter {
     return TextEditingValue(
       text: newText,
       selection: TextSelection.collapsed(offset: newText.length),
+    );
+  }
+}
+
+class RecorrenciaDeleteDialog extends StatelessWidget {
+  const RecorrenciaDeleteDialog({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Row(
+        children: const [
+          Icon(Icons.info_outline, color: Colors.blue),
+          SizedBox(width: 8),
+          Text('Receita recorrente'),
+        ],
+      ),
+      content: const Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(
+              text: 'Deseja que as alterações sejam salvas:\n\n',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            TextSpan(text: '• Apenas para os registros deste mês em diante.\n'),
+            TextSpan(
+                text:
+                    '• Para todos os registros, inclusive de meses anteriores.'),
+          ],
+        ),
+      ),
+      actions: [
+        Center(
+          child: Wrap(
+            spacing: 12,
+            alignment: WrapAlignment.center,
+            children: [
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, 'parcial'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue, // fundo azul
+                  foregroundColor: Colors.white, // texto branco
+                ),
+                child: const Text('Deste mês em diante'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, 'total'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Alterar todos'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Cancelar'),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

@@ -5,6 +5,7 @@ from sqlalchemy import extract
 from app.db import SessionLocal
 from app.models.despesas import Despesas
 from app.schemas.despesas import DespesasCreate
+from app.schemas.update_despesas import DespesasUpdate
 from app.schemas.update_fimRecorrencia import FimRecorrenciaUpdate
 
 router = APIRouter()
@@ -137,17 +138,13 @@ def encerrar_recorrencia_despesa(
 @router.put("/update-despesa/{id}")
 def atualizar_despesa(
     id: int,
-    id_login: str,
-    dados: DespesasCreate,
+    dados: DespesasUpdate,
     db: Session = Depends(get_db)
 ):
     despesa = db.query(Despesas).filter(Despesas.id == id).first()
 
     if not despesa:
         raise HTTPException(status_code=404, detail="Despesa não encontrada")
-
-    if str(despesa.id_login).strip() != str(id_login).strip():
-        raise HTTPException(status_code=403, detail="Você não tem permissão para editar esta despesa.")
 
     despesa.descricao = dados.descricao
     despesa.valor = dados.valor
