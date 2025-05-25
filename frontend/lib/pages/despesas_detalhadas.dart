@@ -139,51 +139,6 @@ class _DespesasDetalhadasPageState extends State<DespesasDetalhadasPage> {
     }
   }
 
-  // Future<void> _deletarDespesa(int idDespesa) async {
-  //   final prefs = await SharedPreferences.getInstance();
-  //   final token = prefs.getString('access_token');
-  //   final userId = prefs.getString('userId');
-
-  //   print('Deletando despesa $idDespesa com id_login: $userId');
-
-  //   if (token == null || userId == null) {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(content: Text('Usuário não autenticado')),
-  //     );
-  //     return;
-  //   }
-
-  //   final isEmulator = await isRunningOnEmulator();
-  //   final baseUrl =
-  //       isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
-  //   final url = '$baseUrl/delete-despesa/$idDespesa?id_login=$userId';
-
-  //   try {
-  //     final response = await http.delete(
-  //       Uri.parse(url),
-  //       headers: {'Authorization': 'Bearer $token'},
-  //     );
-
-  //     if (response.statusCode == 200 || response.statusCode == 204) {
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         const SnackBar(content: Text('Despesa excluída com sucesso')),
-  //       );
-  //       _loadDespesas(); // recarrega a lista
-  //       Future.delayed(const Duration(seconds: 1), () {
-  //         if (mounted) Navigator.pop(context);
-  //       });
-  //     } else {
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         const SnackBar(content: Text('Erro ao excluir despesa')),
-  //       );
-  //     }
-  //   } catch (e) {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(content: Text('Erro de conexão ao excluir despesa')),
-  //     );
-  //   }
-  // }
-
   Future<Map<String, dynamic>?> _obterDetalhesDespesa(int idDespesa) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access_token');
@@ -379,6 +334,8 @@ class _DespesasDetalhadasPageState extends State<DespesasDetalhadasPage> {
     final recorrente = despesa['recorrencia'] ?? false;
     final idDespesa = despesa['id'];
 
+    final mes = monthToNumber[selectedMonth]!;
+
     final currencyFormat =
         NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
     final valorFormatado = currencyFormat.format(valor);
@@ -402,7 +359,6 @@ class _DespesasDetalhadasPageState extends State<DespesasDetalhadasPage> {
       final dia = parsedDate.day;
 
       if (recorrente) {
-        final mes = monthToNumber[selectedMonth]!;
         final ano = int.parse(selectedYear);
         final novaData = DateTime(ano, mes, dia);
         dataVencimento =
@@ -474,7 +430,11 @@ class _DespesasDetalhadasPageState extends State<DespesasDetalhadasPage> {
                     await Navigator.pushNamed(
                       context,
                       '/edit-despesa',
-                      arguments: {'id': idDespesa},
+                      arguments: {
+                        'id': idDespesa,
+                        'mes': mes,
+                        'ano': int.parse(selectedYear),
+                      },
                     );
                     _loadDespesas();
                   },

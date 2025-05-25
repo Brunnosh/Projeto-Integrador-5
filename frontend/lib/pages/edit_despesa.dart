@@ -26,6 +26,8 @@ class _EditDespesaPageState extends State<EditDespesaPage> {
   int? _idCategoriaSelecionada;
   bool _recorrente = false;
   int? _despesaId;
+  int? _selectedMes;
+  int? _selectedAno;
   String _categoriasUrl = '';
   List<Map<String, dynamic>> _categorias = [];
 
@@ -50,6 +52,8 @@ class _EditDespesaPageState extends State<EditDespesaPage> {
           ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
       if (args != null) {
         _despesaId = args['id'];
+        _selectedMes = args['mes'];
+        _selectedAno = args['ano'];
       }
       _setupApiUrl();
     });
@@ -135,6 +139,32 @@ class _EditDespesaPageState extends State<EditDespesaPage> {
     }
   }
 
+  Future<Map<String, dynamic>?> _obterDetalhesDespesa(int idDespesa) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+    final userId = prefs.getString('userId');
+
+    final isEmulator = await isRunningOnEmulator();
+    final baseUrl =
+        isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
+    final url = '$baseUrl/unica-despesa/$idDespesa?id_login=$userId';
+
+    try {
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return null;
+      }
+    } catch (e) {
+      return null;
+    }
+  }
+
   Future<void> atualizarDespesa() async {
     if (!_formKey.currentState!.validate()) {
       _showSnackbar("Preencha todos os campos corretamente.");
@@ -162,19 +192,44 @@ class _EditDespesaPageState extends State<EditDespesaPage> {
       return;
     }
 
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('access_token');
-    final idLogin = prefs.getString('userId');
-
-    if (token == null || idLogin == null) {
-      _showSnackbar('Usuário não autenticado.');
+    if (_despesaId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ID da despesa não está definido')),
+      );
       return;
     }
 
-    final url = '$_despesasUrl/$_despesaId?id_login=$idLogin';
+    final despesa = await _obterDetalhesDespesa(_despesaId!);
+
+    if (despesa == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erro ao carregar detalhes da despesa')),
+      );
+      return;
+    }
+
+    final bool recorrente = despesa['recorrencia'] ?? false;
+
+    if (!recorrente) {
+      await _confirmarEEditar();
+      return;
+    }
+
+    final escolha = await showDialog<String>(
+      context: context,
+      builder: (context) => const RecorrenciaDeleteDialog(),
+    );
+    if (escolha == 'total') {
+      await _confirmarEEditar();
+    } else if (escolha == 'parcial') {
+      await _encerrarRecorrencia(_despesaId!);
+    }
+  }
+
+  Future<void> _confirmarEEditar() async {
+    final url = '$_despesasUrl/$_despesaId';
 
     final requestBody = {
-      'id_login': idLogin,
       'descricao': _descricaoController.text,
       'valor': double.tryParse(
             _valorController.text
@@ -211,6 +266,115 @@ class _EditDespesaPageState extends State<EditDespesaPage> {
       }
     } catch (e) {
       _showSnackbar('Erro ao editar: $e');
+    }
+  }
+
+  Future<void> _encerrarRecorrencia(int idDespesa) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+    final idLogin = prefs.getString('userId');
+
+    final isEmulator = await isRunningOnEmulator();
+    final baseUrl =
+        isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
+
+    final getUrl = '$baseUrl/unica-despesa/$idDespesa?id_login=$idLogin';
+    final putUrl = '$baseUrl/fim-recorrencia-despesa/$idDespesa';
+
+    try {
+      final getResponse = await http.get(
+        Uri.parse(getUrl),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (getResponse.statusCode != 200) {
+        throw Exception("Erro ao buscar despesa para edição");
+      }
+
+      final data = jsonDecode(utf8.decode(getResponse.bodyBytes));
+      final dataVencimento = DateTime.parse(data["data_vencimento"]);
+
+      int anoFim = _selectedMes! == 1 ? _selectedAno! - 1 : _selectedAno!;
+      int mesFim = _selectedMes! == 1 ? 12 : _selectedMes! - 1;
+
+      int diaFim = dataVencimento.day;
+
+      final ultimoDiaMes = DateTime(anoFim, mesFim + 1, 0).day;
+      if (diaFim > ultimoDiaMes) diaFim = ultimoDiaMes;
+
+      final fimRecorrencia = DateTime(anoFim, mesFim, diaFim);
+
+      final body = {
+        "fim_recorrencia": fimRecorrencia.toIso8601String(),
+      };
+
+      final putResponse = await http.put(
+        Uri.parse(putUrl),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(body),
+      );
+
+      if (putResponse.statusCode == 200) {
+        final insertUrl = '$baseUrl/inserir-despesa';
+
+        _selectedDate = _parseDate(_dataVencimentoController.text);
+
+        final novoBody = {
+          "id_login": idLogin,
+          "descricao": _descricaoController.text,
+          "valor": double.tryParse(
+                _valorController.text
+                    .replaceAll(RegExp(r'[^\d,]'), '')
+                    .replaceAll(',', '.'),
+              ) ??
+              0.0,
+          "data_vencimento": _selectedDate!.toIso8601String().split('T')[0],
+          "recorrencia": _recorrente,
+          "id_categoria": _idCategoriaSelecionada,
+          "fim_recorrencia": _fimRecorrencia != null
+              ? _fimRecorrencia!.toIso8601String().split('T')[0]
+              : null,
+        };
+
+        final insertResponse = await http.post(
+          Uri.parse(insertUrl),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode(novoBody),
+        );
+
+        if (insertResponse.statusCode == 200) {
+          final responseData = jsonDecode(insertResponse.body);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(responseData['mensagem'])),
+          );
+
+          Future.delayed(const Duration(seconds: 1), () {
+            if (mounted) Navigator.pop(context);
+          });
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text(
+                    'Erro ao inserir nova despesa: ${insertResponse.body}')),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content:
+                  Text('Erro ao encerrar recorrência: ${putResponse.body}')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro de conexão: $e')),
+      );
     }
   }
 
@@ -454,6 +618,72 @@ class CurrencyInputFormatter extends TextInputFormatter {
     return TextEditingValue(
       text: newText,
       selection: TextSelection.collapsed(offset: newText.length),
+    );
+  }
+}
+
+class RecorrenciaDeleteDialog extends StatelessWidget {
+  const RecorrenciaDeleteDialog({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Row(
+        children: const [
+          Icon(Icons.info_outline, color: Colors.blue),
+          SizedBox(width: 8),
+          Text('Despesa recorrente'),
+        ],
+      ),
+      content: const Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(
+              text: 'Deseja que as alterações sejam salvas:\n\n',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            TextSpan(text: '• Apenas para os registros deste mês em diante.\n'),
+            TextSpan(
+                text:
+                    '• Para todos os registros, inclusive de meses anteriores.'),
+          ],
+        ),
+      ),
+      actions: [
+        Center(
+          child: Wrap(
+            spacing: 12,
+            alignment: WrapAlignment.center,
+            children: [
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, 'parcial'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue, // fundtotalo azul
+                  foregroundColor: Colors.white, // texto branco
+                ),
+                child: const Text('Deste mês em diante'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, 'total'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Alterar todos'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Cancelar'),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
