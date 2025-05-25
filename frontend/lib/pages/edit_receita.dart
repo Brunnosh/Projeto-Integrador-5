@@ -26,6 +26,8 @@ class _EditReceitaPageState extends State<EditReceitaPage> {
   DateTime? _fimRecorrencia;
   bool _recorrente = false;
   int? _receitaId;
+  int? _selectedMes;
+  int? _selectedAno;
 
   DateTime _parseDate(String input) {
     return DateFormat('dd/MM/yyyy').parseStrict(input);
@@ -48,6 +50,8 @@ class _EditReceitaPageState extends State<EditReceitaPage> {
           ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
       if (args != null) {
         _receitaId = args['id'];
+        _selectedMes = args['mes'];
+        _selectedAno = args['ano'];
       }
       _setupApiUrl();
     });
@@ -112,6 +116,32 @@ class _EditReceitaPageState extends State<EditReceitaPage> {
     }
   }
 
+  Future<Map<String, dynamic>?> _obterDetalhesReceita(int idReceita) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+    final userId = prefs.getString('userId');
+
+    final isEmulator = await isRunningOnEmulator();
+    final baseUrl =
+        isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
+    final url = '$baseUrl/unica-receita/$idReceita?id_login=$userId';
+
+    try {
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return null;
+      }
+    } catch (e) {
+      return null;
+    }
+  }
+
   Future<void> atualizarReceita() async {
     if (!_formKey.currentState!.validate()) {
       _showSnackbar("Preencha todos os campos corretamente.");
@@ -129,7 +159,7 @@ class _EditReceitaPageState extends State<EditReceitaPage> {
           if (_fimRecorrencia!.isBefore(_selectedDate!) ||
               _fimRecorrencia!.isAtSameMomentAs(_selectedDate!)) {
             _showSnackbar(
-                "A data de fim da recorrência deve ser posterior à data de vencimento.");
+                "A data de fim da recorrência deve ser posterior à data de recebimento.");
             return;
           }
         }
@@ -139,19 +169,44 @@ class _EditReceitaPageState extends State<EditReceitaPage> {
       return;
     }
 
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('access_token');
-    final idLogin = prefs.getString('userId');
-
-    if (token == null || idLogin == null) {
-      _showSnackbar('Usuário não autenticado.');
+    if (_receitaId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ID da receita não está definido')),
+      );
       return;
     }
 
-    final url = '$_receitasUrl/$_receitaId?id_login=$idLogin';
+    final receita = await _obterDetalhesReceita(_receitaId!);
+
+    if (receita == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erro ao carregar detalhes da receita')),
+      );
+      return;
+    }
+
+    final bool recorrente = receita['recorrencia'] ?? false;
+
+    if (!recorrente) {
+      await _confirmarEEditar();
+      return;
+    }
+
+    final escolha = await showDialog<String>(
+      context: context,
+      builder: (context) => const RecorrenciaDeleteDialog(),
+    );
+    if (escolha == 'total') {
+      await _confirmarEEditar();
+    } else if (escolha == 'parcial') {
+      await _encerrarRecorrencia(_receitaId!);
+    }
+  }
+
+  Future<void> _confirmarEEditar() async {
+    final url = '$_receitasUrl/$_receitaId';
 
     final requestBody = {
-      'id_login': idLogin,
       'descricao': _descricaoController.text,
       'valor': double.tryParse(
             _valorController.text
@@ -160,7 +215,7 @@ class _EditReceitaPageState extends State<EditReceitaPage> {
           ) ??
           0.0,
       'data_recebimento': _selectedDate!.toIso8601String().split('T')[0],
-      'recorrencia': _recorrente,
+      'recorrencia': _recorrente
     };
 
     if (_fimRecorrencia != null) {
@@ -190,16 +245,111 @@ class _EditReceitaPageState extends State<EditReceitaPage> {
     }
   }
 
-  Future<void> _selectDate(TextEditingController controller) async {
-    final currentDate = DateTime.now();
-    final pickedDate = await showDatePicker(
-      context: context,
-      initialDate: currentDate,
-      firstDate: DateTime(1900),
-      lastDate: DateTime(2100),
-    );
-    if (pickedDate != null) {
-      controller.text = DateFormat('dd/MM/yyyy').format(pickedDate);
+  Future<void> _encerrarRecorrencia(int idReceita) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+    final idLogin = prefs.getString('userId');
+
+    final isEmulator = await isRunningOnEmulator();
+    final baseUrl =
+        isEmulator ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
+
+    final getUrl = '$baseUrl/unica-receita/$idReceita?id_login=$idLogin';
+    final putUrl = '$baseUrl/fim-recorrencia-receita/$idReceita';
+
+    try {
+      final getResponse = await http.get(
+        Uri.parse(getUrl),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (getResponse.statusCode != 200) {
+        throw Exception("Erro ao buscar receita para edição");
+      }
+
+      final data = jsonDecode(utf8.decode(getResponse.bodyBytes));
+      final dataRecebimento = DateTime.parse(data["data_recebimento"]);
+
+      int anoFim = _selectedMes! == 1 ? _selectedAno! - 1 : _selectedAno!;
+      int mesFim = _selectedMes! == 1 ? 12 : _selectedMes! - 1;
+
+      int diaFim = dataRecebimento.day;
+
+      final ultimoDiaMes = DateTime(anoFim, mesFim + 1, 0).day;
+      if (diaFim > ultimoDiaMes) diaFim = ultimoDiaMes;
+
+      final fimRecorrencia = DateTime(anoFim, mesFim, diaFim);
+
+      final body = {
+        "fim_recorrencia": fimRecorrencia.toIso8601String(),
+      };
+
+      final putResponse = await http.put(
+        Uri.parse(putUrl),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(body),
+      );
+
+      if (putResponse.statusCode == 200) {
+        final insertUrl = '$baseUrl/inserir-receita';
+
+        _selectedDate = _parseDate(_dataRecebimentoController.text);
+
+        final novoBody = {
+          "id_login": idLogin,
+          "descricao": _descricaoController.text,
+          "valor": double.tryParse(
+                _valorController.text
+                    .replaceAll(RegExp(r'[^\d,]'), '')
+                    .replaceAll(',', '.'),
+              ) ??
+              0.0,
+          "data_recebimento": _selectedDate!.toIso8601String().split('T')[0],
+          "recorrencia": _recorrente,
+          "fim_recorrencia": _fimRecorrencia != null
+              ? _fimRecorrencia!.toIso8601String().split('T')[0]
+              : null,
+        };
+
+        final insertResponse = await http.post(
+          Uri.parse(insertUrl),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode(novoBody),
+        );
+
+        if (insertResponse.statusCode == 200) {
+          final responseData = jsonDecode(insertResponse.body);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(responseData['mensagem'])),
+          );
+
+          Future.delayed(const Duration(seconds: 1), () {
+            if (mounted) Navigator.pop(context);
+          });
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text(
+                    'Erro ao inserir nova receita: ${insertResponse.body}')),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content:
+                  Text('Erro ao encerrar recorrência: ${putResponse.body}')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro de conexão: $e')),
+      );
     }
   }
 
@@ -244,6 +394,19 @@ class _EditReceitaPageState extends State<EditReceitaPage> {
         ],
       ),
     );
+  }
+
+  Future<void> _selectDate(TextEditingController controller) async {
+    final currentDate = DateTime.now();
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: currentDate,
+      firstDate: DateTime(1900),
+      lastDate: DateTime(2100),
+    );
+    if (pickedDate != null) {
+      controller.text = DateFormat('dd/MM/yyyy').format(pickedDate);
+    }
   }
 
   Widget _buildTextField(String label, TextEditingController controller,

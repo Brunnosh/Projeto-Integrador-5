@@ -296,6 +296,8 @@ class _ReceitasDetalhadasPageState extends State<ReceitasDetalhadasPage> {
     final recorrente = receita['recorrencia'] ?? true;
     final idReceita = receita['id'];
 
+    final mes = monthToNumber[selectedMonth]!;
+
     final currencyFormat =
         NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
     final valorFormatado = currencyFormat.format(valor);
@@ -319,7 +321,6 @@ class _ReceitasDetalhadasPageState extends State<ReceitasDetalhadasPage> {
       final dia = parsedDate.day;
 
       if (recorrente) {
-        final mes = monthToNumber[selectedMonth]!;
         final ano = int.parse(selectedYear);
         final novaData = DateTime(ano, mes, dia);
         dataRecebimento =
@@ -389,7 +390,11 @@ class _ReceitasDetalhadasPageState extends State<ReceitasDetalhadasPage> {
                     await Navigator.pushNamed(
                       context,
                       '/edit-receita',
-                      arguments: {'id': idReceita},
+                      arguments: {
+                        'id': idReceita,
+                        'mes': mes,
+                        'ano': int.parse(selectedYear),
+                      },
                     );
                     _loadReceitas();
                   },

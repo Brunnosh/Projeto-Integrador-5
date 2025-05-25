@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:frontend/pages/despesas_detalhadas.dart';
 import 'package:intl/intl.dart';
 import '../utils/environment.dart';
 import 'package:flutter/services.dart';

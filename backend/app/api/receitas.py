@@ -6,6 +6,7 @@ from sqlalchemy import extract
 from app.db import SessionLocal
 from app.models.receitas import Receitas
 from app.schemas.receitas import ReceitaCreate
+from app.schemas.update_receitas import ReceitaUpdate
 from app.schemas.update_fimRecorrencia import FimRecorrenciaUpdate
 
 
@@ -136,17 +137,13 @@ def encerrar_recorrencia_receita(
 @router.put("/update-receita/{id}")
 def atualizar_receita(
     id: int,
-    id_login: str,
-    dados: ReceitaCreate,
+    dados: ReceitaUpdate,
     db: Session = Depends(get_db)
 ):
     receita = db.query(Receitas).filter(Receitas.id == id).first()
 
     if not receita:
         raise HTTPException(status_code=404, detail="receita não encontrada")
-
-    if str(receita.id_login).strip() != str(id_login).strip():
-        raise HTTPException(status_code=403, detail="Você não tem permissão para editar esta receita.")
 
     receita.descricao = dados.descricao
     receita.valor = dados.valor
